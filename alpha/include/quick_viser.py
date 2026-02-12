@@ -121,7 +121,7 @@ class QuickViser:
                 self.vic_num_points += 1
             else:
                 self.vic_odo_points[:-1] = self.vic_odo_points[1:]
-                self.vic_odo_points[-1] = [state_vic.x, state_vic.y, state_vic.z]
+                self.vic_odo_points[-1] = [state_vic[0], state_vic[1], state_vic[2]]
 
             self.vicon_point_cloud_handle.points = self.vic_odo_points[:self.vic_num_points]
 

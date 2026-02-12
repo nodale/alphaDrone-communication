@@ -8,9 +8,6 @@ from include.quick_viser import QuickViser
 
 
 def main():
-    # -----------------------------
-    # Initialization
-    # -----------------------------
     keyboard = QuickKeyboard(file="flight_log.h5")
     keyboard.start()
 
@@ -37,14 +34,8 @@ def main():
     t0 = time.time()
     latest_actuation = None
 
-    # -----------------------------
-    # Main loop
-    # -----------------------------
     try:
         while not keyboard.quit_flag:
-            # -----------------------------
-            # Keyboard-triggered actions
-            # -----------------------------
             if keyboard.arm_flag:
                 mav.arm()
                 keyboard.arm_flag = False
@@ -61,19 +52,15 @@ def main():
                 mav.reboot()
                 keyboard.reboot_flag = False
 
-            # -----------------------------
-            # MAVLink estimated odometry
-            # -----------------------------
             est = mav.get("ODOMETRY", block=False)
             state_est = None
 
             if est is not None:
                 x, y, z = est.x, est.y, est.z
                 vx, vy, vz = est.vx, est.vy, est.vz
-                q = est.q  # [w, x, y, z] depending on MAVLink
+                q = est.q
 
-                # roll, pitch, yaw
-                roll, pitch, yaw = QuickVicon.quat_to_rpy(q)
+                roll, pitch, yaw = vicon._quat_to_rpy(q)
 
                 state_est = np.array([
                     x, y, z,
@@ -84,7 +71,6 @@ def main():
                     est.yawspeed if hasattr(est, "yawspeed") else 0.0,
                 ], dtype=np.float32)
 
-                # Optional logging
                 if not keyboard.pause_flag:
                     t = time.time() - t0
                     row = np.array([
@@ -99,9 +85,6 @@ def main():
                     keyboard.est_idx += 1
                     keyboard.writer.flush()
 
-            # -----------------------------
-            # Vicon data
-            # -----------------------------
             vic = vicon.get_data()
             state_vic = None
 
@@ -129,16 +112,10 @@ def main():
                     keyboard.vic_idx += 1
                     keyboard.writer.flush()
 
-            # -----------------------------
-            # Actuation (Johnny status)
-            # -----------------------------
             johnny = mav.get("JOHNNY_STATUS", block=False)
             if johnny is not None:
                 latest_actuation = np.array(johnny.actuation, dtype=np.float32)
 
-            # -----------------------------
-            # Visualization updates
-            # -----------------------------
             viser.update_point_clouds(state_est, state_vic)
             viser.update_velocity_lines(state_est, state_vic)
             viser.update_x(state_est, state_vic)
@@ -146,7 +123,14 @@ def main():
             if latest_actuation is not None:
                 viser.update_actuation(state_est, state_vic, latest_actuation)
 
-            sleep(0.001)
+            mav.sendPositionTarget(
+                    int(time.time() * 1e6) & 0xFFFFFFFF,
+                    0.0,
+                    0.0,
+                    0.2
+                    )
+
+            time.sleep(0.001)
 
     except KeyboardInterrupt:
         print("Interrupted by user")

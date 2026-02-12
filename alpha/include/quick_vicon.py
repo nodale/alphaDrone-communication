@@ -6,12 +6,9 @@ import msgpack
 
 @dataclass
 class QuickVicon:
-    def __init__(self, address='localhost', port='8020', block=False):
-        try:
-            self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            self.sock.bin((address, port))
-        except:
-            print("cant connect to vicon")
+    def __init__(self, address='10.183.217.138', port='8020', block=False):
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.sock.bind((address, port))
 
         self.sock.setblocking(block)
 
@@ -24,7 +21,7 @@ class QuickVicon:
             x, y, z = msg[2:5]
             vx, vy, vz = msg[5:8]
             q = msg[8:12]
-            r, p, y = quat_to_rpy(q)
+            r, p, y = self._quat_to_rpy(q)
             return(x, y, z, vx, vy, vz, r, p, y)
 
         except BlockingIOError:
@@ -34,7 +31,7 @@ class QuickVicon:
             print("vicon error: ", e)
             return None
 
-    def quat_to_rpy(q):
+    def _quat_to_rpy(self, q):
         w, x, y, z = q
 
         sinr_cosp = 2.0 * (w * x + y * z)

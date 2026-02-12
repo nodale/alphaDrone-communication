@@ -39,6 +39,14 @@ class QuickKeyboard:
 
         self.init_time = time.time()
 
+        print("Press 'q' + Enter to quit")
+        print("Press 'o' + Enter to continue/start recording")
+        print("Press 'p' + Enter to pause recording")
+        print("Press 'r' + Enter to reboot pixhawk")
+        print("Press 'l' + Enter to arm the drone")
+        print("Press 'j' + Enter to kill the drone")
+        print("Press 'k' + Enter to forcefully kill the drone")
+
     def _keyboard_listener(self):
         while not self.quit_flag:
             if sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
@@ -68,10 +76,3 @@ class QuickKeyboard:
     def start(self):
         threading.Thread(target=self._keyboard_listener, daemon=True).start()
 
-        print("Press 'q' + Enter to quit")
-        print("Press 'o' + Enter to continue/start recording")
-        print("Press 'p' + Enter to pause recording")
-        print("Press 'r' + Enter to reboot pixhawk")
-        print("Press 'l' + Enter to arm the drone")
-        print("Press 'j' + Enter to kill the drone")
-        print("Press 'k' + Enter to forcefully kill the drone")
