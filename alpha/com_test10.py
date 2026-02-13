@@ -87,7 +87,6 @@ def main():
 
             vic = vicon.get_data()
             state_vic = None
-
             if vic is not None:
                 x, y, z, vx, vy, vz, roll, pitch, yaw = vic
 
@@ -122,15 +121,15 @@ def main():
 
             if latest_actuation is not None:
                 viser.update_actuation(state_est, state_vic, latest_actuation)
-
+            #TODO NEW STAGE
             mav.sendPositionTarget(
                     int(time.time() * 1e6) & 0xFFFFFFFF,
                     0.0,
                     0.0,
-                    0.2
+                    0.4
                     )
 
-            time.sleep(0.001)
+            time.sleep(0.002)
 
     except KeyboardInterrupt:
         print("Interrupted by user")

@@ -14,15 +14,20 @@ class QuickVicon:
 
     def get_data(self):
         try:
-            payload, addr = self.sock.recvfrom(2048)
+            payload, addr = self.sock.recvfrom(1024)
             msg = msgpack.unpackb(payload, raw=False)
 
             #this depedns on the vicon's code
-            x, y, z = msg[2:5]
-            vx, vy, vz = msg[5:8]
+            #x = msg[2]
+            #y = msg[3]
+            #z = msg[4]
+            #vx = msg[5]
+            #vy = msg[6]
+            #vz = msg[7]
             q = msg[8:12]
             r, p, y = self._quat_to_rpy(q)
-            return(x, y, z, vx, vy, vz, r, p, y)
+            #return(x, y, z, vx, vy, vz, r, p, y)
+            return(msg[2], msg[3], msg[4], msg[5], msg[6], msg[7], r, p, y)
 
         except BlockingIOError:
             return None
