@@ -20,11 +20,11 @@ class QuickMav:
         super().__init__(**kwargs)
 
         self.square_points = (
-                (0.5, 0.5, 0.5),
-                (0.5, -0.5, 0.5),
-                (-0.5, -0.5, 0.5),
-                (-0.5, 0.5, 0.5),
-                (0.0, 0.0, 0.5),
+                (0.5, 0.5, -0.3),
+                (0.5, -0.5, -0.3),
+                (-0.5, -0.5, -0.3),
+                (-0.5, 0.5, -0.3),
+                (0.0, 0.0, -0.3),
                 )
         self.square_progress = 0
 
@@ -171,7 +171,7 @@ class QuickMav:
                 cov2,
                 0,
                 0,
-                0
+                100
                 )
         self.master.mav.send(vodom)
 
@@ -217,19 +217,18 @@ class QuickMav:
                 )
 
     def setTo_active(self):
-        self.setFlightmode("JOHNNY")
-        self.arm()
+        self.setFlightmode("EXTERNAL1")
+        time.sleep(0.1)
+        self.setFlightmode("OFFBOARD")
 
     def setTo_lift(self, time):
-        self.SendPositionTarget(time, 0.0, 0.0, 0.3)
+        self.sendPositionTarget(time, 0.0, 0.0, -0.3)
 
     def setTo_land(self, time):
-        self.SendPositionTarget(time, 0.0, 0.0, 0.0)
+        self.sendPositionTarget(time, 0.0, 0.0, 0.0)
 
     def act_traverseSquare(self, time, current_pos):
-        dist = self.square_points[self.square_progress][0] - current_pos[0]
-            + self.square_points[self.square_progress][1] - current_pos[1] 
-            + self.square_points[self.square_progress][2] - current_pos[2]
+        dist = self.square_points[self.square_progress][0] - current_pos[0] + self.square_points[self.square_progress][1] - current_pos[1] + self.square_points[self.square_progress][2] - current_pos[2]
 
         if dist < 0.05:
             self.square_progress += 1
@@ -246,12 +245,10 @@ class QuickMav:
         y_oscl = 0.6
         omega = 0.02
 
-        dist = self.eight_points[0] - current_pos[0]
-            + self.eight_points[1] - current_pos[1]
-            + self.eight_points[2] - current_pos[2]
+        dist = self.eight_points[0] - current_pos[0] + self.eight_points[1] - current_pos[1] + self.eight_points[2] - current_pos[2]
 
         if dist < 0.01:
             self.eight_progress += 1
-            self.eight_points = (x_oscl * math.sin(omega * self.eight_progress), y_oscl * math.sin(2 * omega * self.eight_progress), 0.5)
+            self.eight_points = (x_oscl * math.sin(omega * self.eight_progress), y_oscl * math.sin(2 * omega * self.eight_progress), -0.3)
 
         self.sendPositionTarget(time, self.eight_points[0], self.eight_points[1], self.eight_points[2])

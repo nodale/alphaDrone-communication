@@ -58,10 +58,11 @@ def main():
                 mav.setTo_lift(current_t)
 
             if keyboard.set_to_land_flag:
-                mav.setTo_lift(current_t)
+                mav.setTo_land(current_t)
 
-            if keyboard.set_to_activate_flag:
+            if keyboard.set_to_active_flag:
                 mav.setTo_active()
+                keyboard.set_to_active_flag = False
 
 
             est = mav.get("ODOMETRY", block=False)
@@ -72,7 +73,7 @@ def main():
                 vx, vy, vz = est.vx, est.vy, est.vz
                 q = est.q
 
-                roll, pitch, yaw = vicon._quat_to_rpy(q)
+                roll, pitch, yaw = vicon._quat_to_rpy_est(q)
 
                 state_est = np.array([
                     x, y, z,
@@ -100,14 +101,23 @@ def main():
             vic = vicon.get_data()
             state_vic = None
             if vic is not None:
-                x, y, z, vx, vy, vz, roll, pitch, yaw = vic
+                x, y, z, vx, vy, vz, q, v_roll, v_pitch, v_yaw = vic
+                roll, pitch, yaw = vicon._quat_to_rpy_vic(q)
 
                 state_vic = np.array([
                     x, y, z,
                     vx, vy, vz,
                     roll, pitch, yaw,
-                    0.0, 0.0, 0.0
+                    v_roll, v_pitch, v_yaw
                 ], dtype=np.float32)
+
+                mav.sendOdometry(
+                        current_t,
+                        (x, y, z),
+                        (q[3], q[0], q[1], q[2]),
+                        (vx, vy, vz),
+                        (v_roll, v_pitch, v_yaw)
+                        )
 
                 if not keyboard.pause_flag:
                     t = time.time() - t0
@@ -139,6 +149,19 @@ def main():
 
             if keyboard.traverse_eight_flag:
                 mav.act_traverseEight(current_t, (est.x, est.y, est.z))
+
+            status_msg = (
+                f"Pause: {keyboard.pause_flag}\n"
+                f"Arm: {keyboard.arm_flag}\n"
+                f"Kill: {keyboard.kill_flag}\n"
+                f"Lift: {keyboard.set_to_lift_flag}\n"
+                f"Land: {keyboard.set_to_land_flag}\n"
+                f"Active: {keyboard.set_to_active_flag}\n"
+                f"Traverse Square: {keyboard.traverse_square_flag}\n"
+                f"Traverse Eight: {keyboard.traverse_eight_flag}\n"
+                f"Actuation: {latest_actuation}\n"
+            )
+            viser.update_status(status_msg)
 
             time.sleep(0.002)
 

@@ -104,6 +104,10 @@ class QuickViser:
             line_width=4,
         )
 
+        #add text debugs
+        self.status_handle = self.server.gui.add_text("Status", " ", multiline=True, disabled=True)
+
+
     def update_point_clouds(self, state_est, state_vic):
         if state_est is not None:
             if self.est_num_points < self.MAX_POINTS:
@@ -220,3 +224,6 @@ class QuickViser:
                         0.15
                     )
                 self.act_handle_vic.points = self.act_lines_vic
+
+    def update_status(self, msg):
+            self.status_handle.value = msg
