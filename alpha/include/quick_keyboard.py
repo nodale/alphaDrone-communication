@@ -16,6 +16,12 @@ class QuickKeyboard:
     kill_flag : bool = False
     force_kill_flag : bool = False
 
+    set_to_lift_flag : bool = False
+    set_to_land_flag : bool = False
+    set_to_active_flag : bool = False
+    traverse_square_flag : bool = False
+    traverse_eight_flag : bool = False
+
     def __init__(self, file="LOG.h5"):
         self.writer = h5py.File(file, "w")
 
@@ -47,6 +53,12 @@ class QuickKeyboard:
         print("Press 'j' + Enter to kill the drone")
         print("Press 'k' + Enter to forcefully kill the drone")
 
+        print("Press 'm' + Enter to set the drone to lift")
+        print("Press 'n' + Enter to set the drone to land")
+        print("Press 'b' + Enter to set the drone to activate")
+        print("Press 'v' + Enter to set the drone to traverse square")
+        print("Press 'c' + Enter to set the drone to traverse eight")
+
     def _keyboard_listener(self):
         while not self.quit_flag:
             if sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
@@ -72,6 +84,34 @@ class QuickKeyboard:
                 if key.lower() == 'k':
                     self.force_kill_flag = True
                     print("FORCE KILLING")
+
+                if key.lower() == 'm':
+                    self.set_to_lift_flag = True
+                    self.set_to_land_flag = False
+                    self.traverse_square_flag = False
+                    self.traverse_eight_flag = False
+                    print("SET TO LIFT")
+                if key.lower() == 'n':
+                    self.set_to_lift_flag = False
+                    self.set_to_land_flag = True
+                    self.traverse_square_flag = False
+                    self.traverse_eight_flag = False
+                    print("SET TO LAND")
+                if key.lower() == 'b':
+                    self.set_to_active_flag = True
+                    print("SET TO ACTIVE")
+                if key.lower() == 'v':
+                    self.set_to_lift_flag = False
+                    self.set_to_land_flag = False
+                    self.traverse_square_flag = True
+                    self.traverse_eight_flag = False
+                    print("TRAVERSING SQUARE")
+                if key.lower() == 'c':
+                    self.set_to_lift_flag = False
+                    self.set_to_land_flag = False
+                    self.traverse_square_flag = False
+                    self.traverse_eight_flag = True
+                    print("TRAVERSING EIGHT")
 
     def start(self):
         threading.Thread(target=self._keyboard_listener, daemon=True).start()

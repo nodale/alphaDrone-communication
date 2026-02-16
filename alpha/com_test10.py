@@ -36,6 +36,8 @@ def main():
 
     try:
         while not keyboard.quit_flag:
+            current_t = int(time.time() * 1e6) & 0xFFFFFFFF
+
             if keyboard.arm_flag:
                 mav.arm()
                 keyboard.arm_flag = False
@@ -51,6 +53,16 @@ def main():
             if keyboard.reboot_flag:
                 mav.reboot()
                 keyboard.reboot_flag = False
+
+            if keyboard.set_to_lift_flag:
+                mav.setTo_lift(current_t)
+
+            if keyboard.set_to_land_flag:
+                mav.setTo_lift(current_t)
+
+            if keyboard.set_to_activate_flag:
+                mav.setTo_active()
+
 
             est = mav.get("ODOMETRY", block=False)
             state_est = None
@@ -121,13 +133,12 @@ def main():
 
             if latest_actuation is not None:
                 viser.update_actuation(state_est, state_vic, latest_actuation)
-            #TODO NEW STAGE
-            mav.sendPositionTarget(
-                    int(time.time() * 1e6) & 0xFFFFFFFF,
-                    0.0,
-                    0.0,
-                    0.4
-                    )
+
+            if keyboard.traverse_square_flag:
+                mav.act_traverseSquare(current_t, (est.x, est.y, est.z))
+
+            if keyboard.traverse_eight_flag:
+                mav.act_traverseEight(current_t, (est.x, est.y, est.z))
 
             time.sleep(0.002)
 
