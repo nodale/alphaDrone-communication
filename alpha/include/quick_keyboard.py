@@ -10,7 +10,7 @@ import time
 @dataclass
 class QuickKeyboard:
     quit_flag : bool = False
-    pause_flag : bool = True
+    pause_flag : bool = False
     reboot_flag : bool = False
     arm_flag : bool = False
     kill_flag : bool = False
@@ -27,8 +27,8 @@ class QuickKeyboard:
 
         self.est_ds = self.writer.create_dataset(
             "estimated",
-            shape=(0, 11),
-            maxshape=(None, 11),
+            shape=(0, 14),
+            maxshape=(None, 14),
             dtype=np.float32,
             chunks=True
         )
@@ -36,8 +36,8 @@ class QuickKeyboard:
 
         self.vic_ds = self.writer.create_dataset(
             "vicon",
-            shape=(0, 11),
-            maxshape=(None, 11),
+            shape=(0, 14),
+            maxshape=(None, 14),
             dtype=np.float32,
             chunks=True
         )
