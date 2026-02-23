@@ -8,18 +8,22 @@ from viser.transforms import SO3
 # =========================
 # Load HDF5 data
 # =========================
-FILENAME = "flight_log.h5"
+FILENAME = "past_logs/flight_log-23_02_2026_a.h5"
 
 with h5py.File(FILENAME, "r") as f:
-    est = f["estimated"][:]  # (N, 11)
+    print("Keys:", list(f.keys()))
+    for k in f.keys():
+        print(k, f[k].shape)
+
+with h5py.File(FILENAME, "r") as f:
+    est = f["vicon"][:]  # (N, 11)
+
+N = est.shape[0]
 
 t_est = est[:, 0]
+t_est = t_est - t_est[0]        # normalize time
 pos_est = est[:, 1:4]
-quat_est = est[:, 7:11]  # qx qy qz qw
-
-# Normalize time
-t_est = t_est - t_est[0]
-N = len(t_est)
+quat_est = est[:, 7:11]         # qx qy qz qw
 
 # =========================
 # Start viser server
@@ -27,10 +31,8 @@ N = len(t_est)
 server = viser.ViserServer()
 
 # =========================
-# Scene objects (VALID APIs)
+# Scene objects
 # =========================
-
-# Trajectory as point cloud
 traj_points = server.scene.add_point_cloud(
     name="trajectory",
     points=pos_est,
@@ -38,7 +40,6 @@ traj_points = server.scene.add_point_cloud(
     point_size=0.02,
 )
 
-# Body frame (pose)
 body = server.scene.add_frame(
     name="body",
     axes_length=0.3,
@@ -91,10 +92,11 @@ def _replay(_):
 
 @time_slider.on_update
 def _slider_update(event):
-    global idx
+    global idx, playing
+    playing = False  # pause while scrubbing
     with lock:
         idx = np.searchsorted(t_est, event.value)
-        idx = np.clip(idx, 0, N - 1)
+        idx = int(np.clip(idx, 0, N - 1))
 
 # =========================
 # Playback loop
@@ -124,16 +126,14 @@ def playback_loop():
             last_wall_time = time.time()
             idx += 1
 
-            # Update slider
             time_slider.value = float(t_est[idx])
 
-            # Update pose
             p = pos_est[idx]
             qx, qy, qz, qw = quat_est[idx]
 
             body.position = p
             body.orientation = SO3.from_quaternion(
-                np.array([qw, qx, qy, qz])  # viser expects w,x,y,z
+                np.array([qw, qx, qy, qz])
             )
 
 # =========================
@@ -141,5 +141,3 @@ def playback_loop():
 # =========================
 threading.Thread(target=playback_loop, daemon=True).start()
 threading.Event().wait()
-print("Viser server running. Open the printed URL.")
-
