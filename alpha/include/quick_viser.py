@@ -20,8 +20,8 @@ class QuickViser:
         self.cross_offset = np.array([
             [ self.xf,  self.yr, 0.0],   
             [ self.xf, -self.yl, 0.0],   
-            [-self.xb,  self.yl, 0.0],   
-            [-self.xb, -self.yr, 0.0],   
+            [-self.xb, -self.yl, 0.0],   
+            [-self.xb, self.yr, 0.0],   
         ], dtype=np.float32)
 
         #viser setup

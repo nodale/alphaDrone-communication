@@ -161,7 +161,7 @@ class QuickMav:
     def sendOdometry(self, time, pos, q, vel, rotRates, cov1=[0.002]*21, cov2=[0.002]*21):
         vodom = mavlink2.MAVLink_odometry_message(
                 time,
-                mavutil.mavlink.MAV_FRAME_LOCAL_FRD,
+                mavutil.mavlink.MAV_FRAME_LOCAL_NED,
                 mavutil.mavlink.MAV_FRAME_BODY_FRD,
                 pos[0], pos[1], pos[2],
                 [q[0], q[1], q[2], q[3]],
@@ -195,7 +195,7 @@ class QuickMav:
                 time,
                 self.master.target_system,
                 self.master.target_component,
-                mavutil.mavlink.MAV_FRAME_LOCAL_FRD,
+                mavutil.mavlink.MAV_FRAME_LOCAL_NED,
                 0b0000111111000111,
                 0, 0, 0,  #position
                 vx, vy, vz,  #velocity
@@ -208,7 +208,7 @@ class QuickMav:
                 time,
                 self.master.target_system,
                 self.master.target_component,
-                mavutil.mavlink.MAV_FRAME_LOCAL_FRD,
+                mavutil.mavlink.MAV_FRAME_LOCAL_NED,
                 0b0000111111111000,
                 x, y, z,  #position
                 0, 0, 0,  #velocity
