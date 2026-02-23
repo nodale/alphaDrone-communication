@@ -68,6 +68,10 @@ def main():
             est = mav.get("ODOMETRY", block=False)
             state_est = None
 
+            johnny = mav.get("JOHNNY_STATUS", block=False)
+            if johnny is not None:
+                latest_actuation = np.array(johnny.actuation, dtype=np.float32)
+
             if est is not None:
                 x, y, z = est.x, est.y, est.z
                 vx, vy, vz = est.vx, est.vy, est.vz
@@ -90,7 +94,8 @@ def main():
                         t,
                         x, y, z,
                         vx, vy, vz,
-                        q[1], q[2], q[3], q[0],
+                        roll, pitch, yaw,
+                        latest_actuation[0], latest_actuation[1], latest_actuation[2], latest_actuation[3]
                     ], dtype=np.float32)
 
                     keyboard.est_ds.resize(keyboard.est_idx + 1, axis=0)
@@ -125,17 +130,14 @@ def main():
                         t,
                         x, y, z,
                         vx, vy, vz,
-                        roll, pitch, yaw, 0.0
+                        roll, pitch, yaw,
+                        latest_actuation[0], latest_actuation[1], latest_actuation[2], latest_actuation[3]
                     ], dtype=np.float32)
 
                     keyboard.vic_ds.resize(keyboard.vic_idx + 1, axis=0)
                     keyboard.vic_ds[keyboard.vic_idx] = row
                     keyboard.vic_idx += 1
                     keyboard.writer.flush()
-
-            johnny = mav.get("JOHNNY_STATUS", block=False)
-            if johnny is not None:
-                latest_actuation = np.array(johnny.actuation, dtype=np.float32)
 
             viser.update_point_clouds(state_est, state_vic)
             viser.update_velocity_lines(state_est, state_vic)
