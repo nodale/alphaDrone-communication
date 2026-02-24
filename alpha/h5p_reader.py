@@ -8,7 +8,7 @@ from viser.transforms import SO3
 # =========================
 # Load HDF5 data
 # =========================
-FILENAME = "past_logs/flight_log-23_02_2026_a.h5"
+FILENAME = "past_logs/flight_log-23_02_2026_b.h5"
 
 with h5py.File(FILENAME, "r") as f:
     print("Keys:", list(f.keys()))

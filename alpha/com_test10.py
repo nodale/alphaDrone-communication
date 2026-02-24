@@ -33,6 +33,7 @@ def main():
 
     t0 = time.time()
     latest_actuation = None
+    latest_actuation = np.array([0.0, 0.0, 0.0, 0.0], dtype=np.float32)
 
     try:
         while not keyboard.quit_flag:
@@ -142,6 +143,7 @@ def main():
             viser.update_point_clouds(state_est, state_vic)
             viser.update_velocity_lines(state_est, state_vic)
             viser.update_x(state_est, state_vic)
+            viser.update_heading(state_est, state_vic)
 
             if latest_actuation is not None:
                 viser.update_actuation(state_est, state_vic, latest_actuation)

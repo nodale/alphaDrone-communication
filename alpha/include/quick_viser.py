@@ -104,6 +104,23 @@ class QuickViser:
             line_width=4,
         )
 
+        # heading visualization
+        self.heading_line_est = np.zeros((1, 2, 3), dtype=np.float32)
+        self.heading_handle_est = self.server.scene.add_line_segments(
+            name="heading_est",
+            points=self.heading_line_est,
+            colors=(0, 255, 0), 
+            line_width=4,
+        )
+
+        self.heading_line_vic = np.zeros((1, 2, 3), dtype=np.float32)
+        self.heading_handle_vic = self.server.scene.add_line_segments(
+            name="heading_vic",
+            points=self.heading_line_vic,
+            colors=(0, 200, 255),
+            line_width=4,
+        )
+
         #add text debugs
         self.status_handle = self.server.gui.add_text("Status", " ", multiline=True, disabled=True)
 
@@ -224,6 +241,28 @@ class QuickViser:
                         0.15
                     )
                 self.act_handle_vic.points = self.act_lines_vic
+
+    def _heading_dir(self, roll, pitch, yaw):
+        R = self._rpy_to_rot(roll, pitch, yaw)
+        forward_body = np.array([1.0, 0.0, 0.0], dtype=np.float32)
+        return R @ forward_body
+
+    def update_heading(self, state_est, state_vic, scale=0.3):
+        if state_est is not None:
+            pos = np.array(state_est[0:3], dtype=np.float32)
+            heading = self._heading_dir(state_est[6], state_est[7], state_est[8])
+
+            self.heading_line_est[0, 0] = pos
+            self.heading_line_est[0, 1] = pos + heading * scale
+            self.heading_handle_est.points = self.heading_line_est
+
+        if state_vic is not None:
+            pos = np.array(state_vic[0:3], dtype=np.float32)
+            heading = self._heading_dir(state_vic[6], state_vic[7], state_vic[8])
+
+            self.heading_line_vic[0, 0] = pos
+            self.heading_line_vic[0, 1] = pos + heading * scale
+            self.heading_handle_vic.points = self.heading_line_vic
 
     def update_status(self, msg):
             self.status_handle.value = msg
