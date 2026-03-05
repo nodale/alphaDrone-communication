@@ -7,7 +7,8 @@ from include.quick_mavlink import QuickMav
 def main():
     mav = QuickMav(
         address="/dev/ttyTHS1",
-        baudrate=921600
+        baudrate=921600,
+        create=True
     )
 
     print("Waiting for MAVLink heartbeat...")
@@ -24,14 +25,14 @@ def main():
                 mav.est_odo = msg
                 mav.publish_odometry("estimated_state")
 
-            time.sleep(0.01)
+            #time.sleep(0.01)
 
         except Exception as e:
             #print("Error in main loop:", e)
             mav.shm.close()
             mav.shm.unlink()
             traceback.print_exc()
-            time.sleep(1)
+            #time.sleep(1)
 
     #except KeyboardInterrupt:
     #    #print("Stopping MAVLink interface...")

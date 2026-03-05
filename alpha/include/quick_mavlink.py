@@ -13,7 +13,7 @@ class QuickMav:
     freq : float = 50
     timeBoot : float = 0.0
 
-    def __init__(self, address, baudrate, **kwargs):
+    def __init__(self, address, baudrate, create=False, **kwargs):
         self.timeBoot = time.time()
         try:
             self.master = mavutil.mavlink_connection(address, baudrate, robust_parsing=True, source_system=255, source_component=0, autoreconnect=True, source_port=14552, udp_timeout=1)
@@ -33,9 +33,10 @@ class QuickMav:
         self.eight_points = (0.0, 0.0, 0.0)
         self.eight_progress = 0.0
 
-        self.state = np.array([0.0]*13, dtype=np.float64)
-        self.shm = shared_memory.SharedMemory(name="estimated_state", create=True, size=self.state.nbytes)
-        self.shared_state = np.ndarray(self.state.shape, dtype=self.state.dtype, buffer=self.shm.buf)
+        if create==True:
+            self.state = np.array([0.0]*13, dtype=np.float64)
+            self.shm = shared_memory.SharedMemory(name="estimated_state", create=True, size=self.state.nbytes)
+            self.shared_state = np.ndarray(self.state.shape, dtype=self.state.dtype, buffer=self.shm.buf)
 
     def __del__(self):
         self.master.close()

@@ -3,6 +3,33 @@ import numpy as np
 
 from include.quick_viser import QuickViser
 
+import numpy as np
+
+def reform(state):
+    new_state = np.zeros_like(state)
+    new_state[:3] = state[:3]       # x, y, z
+    new_state[3:6] = state[3:6]     # vx, vy, vz
+    new_state[10:] = state[10:]     # wx, wy, wz
+
+    qw, qx, qy, qz = state[6:10]
+
+    sinr_cosp = 2.0 * (qw * qx + qy * qz)
+    cosr_cosp = 1.0 - 2.0 * (qx * qx + qy * qy)
+    roll = np.arctan2(sinr_cosp, cosr_cosp)
+
+    sinp = 2.0 * (qw * qy - qz * qx)
+    if abs(sinp) >= 1:
+        pitch = np.sign(sinp) * np.pi / 2  # gimbal lock
+    else:
+        pitch = np.arcsin(sinp)
+
+    siny_cosp = 2.0 * (qw * qz + qx * qy)
+    cosy_cosp = 1.0 - 2.0 * (qy * qy + qz * qz)
+    yaw = np.arctan2(siny_cosp, cosy_cosp)
+
+    new_state[6:9] = [roll, pitch, yaw]
+
+    return new_state
 
 def main():
     vis = QuickViser(
@@ -15,38 +42,24 @@ def main():
 
     while True:
         try:
-            state_est = vis.est_state.copy()
-            state_vic = vis.vic_state.copy()
+            _state_est = vis.est_state.copy()
+            _state_vic = vis.vic_state.copy()
 
-            #vis.update_point_clouds(state_est, state_vic)
-            #vis.update_velocity_lines(state_est, state_vic)
-            #vis.update_x(state_est, state_vic)
-            #vis.update_heading(state_est, state_vic)
+            state_est = reform(_state_est)
+            state_vic = reform(_state_vic)
 
-            vis.update_status(
-                f"""
-EST position: {state_est[0]:.3f}, {state_est[1]:.3f}, {state_est[2]:.3f}
-VICON position: {state_vic[0]:.3f}, {state_vic[1]:.3f}, {state_vic[2]:.3f}
-"""
-            )
+            vis.update_point_clouds(state_est, state_vic)
+            vis.update_velocity_lines(state_est, state_vic)
+            vis.update_x(state_est, state_vic)
+            vis.update_heading(state_est, state_vic)
 
-            time.sleep(0.02) 
+            time.sleep(0.01) 
 
         except Exception as e:
-            #print("Error in main loop:", e)
             vis.shm_est.close()
             vis.shm_vic.close()
             traceback.print_exc()
             time.sleep(1)
-    #except KeyboardInterrupt:
-    #    #print("Stopping visualization...")
-    #    vis.shm_est.close()
-    #    vis.shm_vic.close()
-
-    #finally:
-    #    vis.shm_est.close()
-    #    vis.shm_vic.close()
-
 
 if __name__ == "__main__":
     main()
