@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from multiprocessing import shared_memory
 
 import numpy as np
 import viser
@@ -16,6 +17,12 @@ class QuickViser:
     yr : float = 0.158
 
     def __init__(self, port=8080, verbose=True):
+        self.shm_est = shared_memory.SharedMemory(name="estimated_state")
+        self.shm_vic = shared_memory.SharedMemory(name="vicon_state")
+        
+        self.est_state = np.ndarray((13,), dtype=np.float64, buffer=self.shm_est)
+        self.vic_state = np.ndarray((7,), dtype=np.float64, buffer=self.shm_vic)
+
         #cross offset setup
         self.cross_offset = np.array([
             [ self.xf,  self.yr, 0.0],   
@@ -123,7 +130,6 @@ class QuickViser:
 
         #add text debugs
         self.status_handle = self.server.gui.add_text("Status", " ", multiline=True, disabled=True)
-
 
     def update_point_clouds(self, state_est, state_vic):
         if state_est is not None:

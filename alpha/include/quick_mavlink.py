@@ -2,6 +2,8 @@ from dataclasses import dataclass
 
 from pymavlink import mavutil
 from pymavlink.dialects.v20 import common as mavlink2
+from multiprocessing import shared_memory
+import numpy as np
 
 import time
 import math
@@ -31,6 +33,10 @@ class QuickMav:
         self.eight_points = (0.0, 0.0, 0.0)
         self.eight_progress = 0.0
 
+        self.state = np.array([0.0]*13, dtype=np.float64)
+        self.shm = shared_memory.SharedMemory(name="estimated_state", create=True, size=self.state.nbytes)
+        self.shared_state = np.ndarray(self.state.shape, dtype=self.state.dtype, buffer=self.shm.buf)
+
     def __del__(self):
         self.master.close()
 
@@ -56,21 +62,13 @@ class QuickMav:
         except:
             print("sending heartbeat failed :(")
 
-        #self.master.mav.request_data_stream_send(
-        #    self.master.target_system,
-        #    self.master.target_component,
-        #    mavutil.mavlink.MAV_DATA_STREAM_ALL,
-        #    100, 
-        #    1  
-        #)
-
         self.master.mav.command_long_send(
                 self.master.target_system,
                 self.master.target_component,
                 mavutil.mavlink.MAV_CMD_SET_MESSAGE_INTERVAL,  
                 0,                                             
                 44001,  #this is for johnny_status                          
-                100,                                   
+                50,                                   
                 0, 0, 0, 0, 0                                  
                 )
 
@@ -80,7 +78,7 @@ class QuickMav:
                 mavutil.mavlink.MAV_CMD_SET_MESSAGE_INTERVAL,  
                 0,                                             
                 331,    #odometry
-                100,                                   
+                50,                                   
                 0, 0, 0, 0, 0                                  
                 )
 
@@ -89,7 +87,7 @@ class QuickMav:
                 self.master.target_component,
                 mavutil.mavlink.MAV_CMD_SET_MESSAGE_INTERVAL,  
                 0,                                             
-                1,      #sys_status for amp and voltage              
+                50,      #sys_status for amp and voltage              
                 10,                                   
                 0, 0, 0, 0, 0                                  
                 )
@@ -151,18 +149,34 @@ class QuickMav:
         return self.master.recv_match(type=TYPE, blocking=block, timeout=0.1)
 
     def getOdometry(self, block=False):
-        est_odo = self.master.get("ODOMETRY", block=block)
-        return est_odo
+        self.est_odo = self.master.get("ODOMETRY", block=block)
+        return self.est_odo
 
     def getJohnny(self, block=False):
         johnny = self.master.get("JOHNNY_STATUS", block=block)
         return johnny
 
+    def publish_odometry(self, name):
+        x, y, z = self.est_odo.x, self.est_odo.y, self.est_odo.z
+        vx, vy, vz = self.est_odo.vx, self.est_odo.vy, self.est_odo.vz
+        qw, qx, qy, qz = self.est_odo.q
+        wx, wy, wz = self.est_odo.rollspeed, self.est_odo.pitchspeed, self.est_odo.yawspeed
+
+        #self.state = np.array([x, y, z, vx, vy, vz, qw, qx, qy, qz, wx, wy, wz], dtype=np.float64)
+        #self.shared_state = self.state[:]
+
+        self.shared_state[:] = [
+            x, y, z,
+            vx, vy, vz,
+            qw, qx, qy, qz,
+            wx, wy, wz
+        ]
+
     def sendOdometry(self, time, pos, q, vel, rotRates, cov1=[0.002]*21, cov2=[0.002]*21):
         vodom = mavlink2.MAVLink_odometry_message(
                 time,
-                mavutil.mavlink.MAV_FRAME_LOCAL_NED,
-                mavutil.mavlink.MAV_FRAME_BODY_FRD,
+                mavutil.mavlink.MAV_FRAME_LOCAL_FRD,
+                mavutil.mavlink.MAV_FRAME_LOCAL_FRD,
                 pos[0], pos[1], pos[2],
                 [q[0], q[1], q[2], q[3]],
                 vel[0], vel[1], vel[2],
@@ -222,7 +236,7 @@ class QuickMav:
         self.setFlightmode("OFFBOARD")
 
     def setTo_lift(self, time):
-        self.sendPositionTarget(time, 0.0, 0.0, -0.3)
+        self.sendPositionTarget(time, 0.0, 0.0, -0.1)
 
     def setTo_land(self, time):
         self.sendPositionTarget(time, 0.0, 0.0, 0.0)

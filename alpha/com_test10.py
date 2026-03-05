@@ -8,6 +8,10 @@ from include.quick_viser import QuickViser
 
 
 def main():
+    LOOP_HZ = 100
+    LOOP_PERIOD = 1.0 / LOOP_HZ
+    next_time = time.perf_counter()
+
     keyboard = QuickKeyboard(file="flight_log.h5")
     keyboard.start()
 
@@ -25,7 +29,7 @@ def main():
 
     viser = QuickViser(
         port=8080,
-        verbose=True
+        verbose=False
     )
 
     print("System initialized")
@@ -73,11 +77,15 @@ def main():
             if johnny is not None:
                 latest_actuation = np.array(johnny.actuation, dtype=np.float32)
 
+            est_roll, est_pitch = 0, 0
             if est is not None:
                 x, y, z = est.x, est.y, est.z
                 vx, vy, vz = est.vx, est.vy, est.vz
                 q = est.q
 
+                #x, y, z = johnny.state_offset[0], johnny.state_offset[1], johnny.state_offset[2]
+                #vx, vy, vz = johnny.state_offset[3], johnny.state_offset[4], johnny.state_offset[5]
+                #roll, pitch, yaw = johnny.state_offset[6], johnny.state_offset[7], johnny.state_offset[8]
                 roll, pitch, yaw = vicon._quat_to_rpy_est(q)
 
                 state_est = np.array([
@@ -106,16 +114,21 @@ def main():
 
             vic = vicon.get_data()
             state_vic = None
+            vic_roll, vic_pitch = 0, 0
             if vic is not None:
                 x, y, z, vx, vy, vz, q, v_roll, v_pitch, v_yaw = vic
                 roll, pitch, yaw = vicon._quat_to_rpy_vic(q)
-
+                vic_roll, vic_pitch = roll, pitch
+            
                 state_vic = np.array([
                     x, y, z,
                     vx, vy, vz,
                     roll, pitch, yaw,
                     v_roll, v_pitch, v_yaw
                 ], dtype=np.float32)
+
+                #diff = time.time_ns() - x - 99846860
+                #print(f"{x}      {time.time_ns()}       {diff}")
 
                 mav.sendOdometry(
                         current_t,
@@ -140,11 +153,12 @@ def main():
                     keyboard.vic_idx += 1
                     keyboard.writer.flush()
 
+            #print(f"{vic_roll:.4f}, {vic_pitch:.4f}     {est_roll:.4f}, {est_pitch:.4f}")
+
             viser.update_point_clouds(state_est, state_vic)
             viser.update_velocity_lines(state_est, state_vic)
             viser.update_x(state_est, state_vic)
             viser.update_heading(state_est, state_vic)
-
             if latest_actuation is not None:
                 viser.update_actuation(state_est, state_vic, latest_actuation)
 
@@ -167,7 +181,12 @@ def main():
             )
             viser.update_status(status_msg)
 
-            time.sleep(0.002)
+            next_time += LOOP_PERIOD
+            sleep_time = next_time - time.perf_counter()
+            if sleep_time > 0:
+                time.sleep(sleep_time)
+            else:
+                next_time = time.perf_counter()
 
     except KeyboardInterrupt:
         print("Interrupted by user")
