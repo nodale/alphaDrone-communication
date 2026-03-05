@@ -1,0 +1,18 @@
+
+[Unit]
+Description=Collects data from PixHawk
+After=network.target
+
+[Service]
+Type=simple
+User=me
+WorkingDirectory=/home/me/drone/alphaDrone-communication/alpha
+ExecStart=/home/me/drone/mavenv/bin/python /home/me/drone/alphaDrone-communication/alpha/estimator_collector.py
+Restart=always
+RestartSec=5
+StandardOutput=append:/home/me/drone/estimation.log
+StandardError=append:/home/me/drone/estimation.log
+Environment="PATH=/home/me/drone/mavenv/bin:/usr/bin:/bin"
+
+[Install]
+WantedBy=multi-user.target

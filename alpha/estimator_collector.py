@@ -1,6 +1,7 @@
 import time
+import traceback
 
-from quickmav import QuickMav
+from include.quick_mavlink import QuickMav
 
 
 def main():
@@ -15,8 +16,8 @@ def main():
 
     mav.sendHeartbeat()
 
-    try:
-        while True:
+    while True:
+        try:
             msg = mav.master.recv_match(type="ODOMETRY", blocking=False)
 
             if msg is not None:
@@ -25,12 +26,23 @@ def main():
 
             time.sleep(0.01)
 
-    except KeyboardInterrupt:
-        print("Stopping MAVLink interface...")
+        except Exception as e:
+            #print("Error in main loop:", e)
+            mav.shm.close()
+            mav.shm.unlink()
+            traceback.print_exc()
+            time.sleep(1)
 
-    finally:
-        mav.shm.close()
-        mav.shm.unlink()
+    #except KeyboardInterrupt:
+    #    #print("Stopping MAVLink interface...")
+    #    mav.shm.close()
+    #    mav.shm.unlink()
+    #    time.sleep(1)
+    #    
+    #finally:
+    #    mav.shm.close()
+    #    mav.shm.unlink()
+    #    time.sleep(1)
 
 
 if __name__ == "__main__":

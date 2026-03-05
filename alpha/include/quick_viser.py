@@ -20,8 +20,8 @@ class QuickViser:
         self.shm_est = shared_memory.SharedMemory(name="estimated_state")
         self.shm_vic = shared_memory.SharedMemory(name="vicon_state")
         
-        self.est_state = np.ndarray((13,), dtype=np.float64, buffer=self.shm_est)
-        self.vic_state = np.ndarray((7,), dtype=np.float64, buffer=self.shm_vic)
+        self.est_state = np.ndarray((13,), dtype=np.float64, buffer=self.shm_est.buf)
+        self.vic_state = np.ndarray((7,), dtype=np.float64, buffer=self.shm_vic.buf)
 
         #cross offset setup
         self.cross_offset = np.array([

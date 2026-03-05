@@ -87,6 +87,7 @@ def main():
                 #vx, vy, vz = johnny.state_offset[3], johnny.state_offset[4], johnny.state_offset[5]
                 #roll, pitch, yaw = johnny.state_offset[6], johnny.state_offset[7], johnny.state_offset[8]
                 roll, pitch, yaw = vicon._quat_to_rpy_est(q)
+                est_roll, est_pitch = roll, pitch
 
                 state_est = np.array([
                     x, y, z,
