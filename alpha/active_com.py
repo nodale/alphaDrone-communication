@@ -17,15 +17,18 @@ def main():
     keyboard.start()
 
     mav = QuickMav(
-            address="udpout:192.168.0.3:14561",   
+        address="udpout:192.168.0.3:14561",   
         baudrate=921600,
         create=False
     )
     mav.sendHeartbeat()
 
     shm_vic = shared_memory.SharedMemory(name="vicon_state")
+    shm_init_vic = shared_memory.SharedMemory(name="vicon_init_state")
     vic_state = np.ndarray((13,), dtype=np.float64, buffer=shm_vic.buf)
+    vic_init_state = np.ndarray((13,), dtype=np.float64, buffer=shm_init_vic.buf)
     resource_tracker.unregister(shm_vic._name, "shared_memory")
+    resource_tracker.unregister(shm_init_vic._name, "shared_memory")
 
     try:
         while not keyboard.quit_flag:
@@ -46,6 +49,7 @@ def main():
             if keyboard.reboot_flag:
                 mav.reboot()
                 keyboard.reboot_flag = False
+                vic_init_state[:3] = vic_state[:3]  
 
             if keyboard.set_to_lift_flag:
                 mav.setTo_lift(current_t)

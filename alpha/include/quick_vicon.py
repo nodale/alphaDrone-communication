@@ -24,6 +24,9 @@ class QuickVicon:
         self.shm = shared_memory.SharedMemory(name="vicon_state", create=True, size=self.state.nbytes)
         self.shared_state = np.ndarray(self.state.shape, dtype=self.state.dtype, buffer=self.shm.buf)
 
+        self.init_state = np.zeros(13, dtype=np.float64)
+        self.init_shm = shared_memory.SharedMemory(name="vicon_init_state", create=True, size=self.init_state.nbytes)
+        self.init_shared_state = np.ndarray(self.init_state.shape, dtype=self.init_state.dtype, buffer=self.init_shm.buf)
     def get_data(self):
         try:
             payload, addr = self.sock.recvfrom(1024)
@@ -66,7 +69,8 @@ class QuickVicon:
         self.state[6:10] = quat  # qw, qx, qy, qz
         self.state[10:13] = [wx, wy, wz]
 
-        self.shared_state[:] = self.state
+        _state = self.state - self.init_shared_state
+        self.shared_state[:] = _state
 
         self.prev_pos = pos
         self.prev_quat = quat

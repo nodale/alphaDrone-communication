@@ -5,6 +5,12 @@ from include.quick_viser import QuickViser
 
 import numpy as np
 
+##################### PARAM #######################
+
+PORT = 8080
+
+##################### ##### #######################
+
 def reform(state):
     new_state = np.zeros_like(state)
     new_state[:3] = state[:3]       # x, y, z
@@ -33,12 +39,12 @@ def reform(state):
 
 def main():
     vis = QuickViser(
-        port=8080,
+        port=PORT,
         verbose=False
     )
 
-    print("Viser server running...")
-    print("Open http://localhost:8080 in your browser")
+    #print("Viser server running...")
+    #print("Open http://localhost:8080 in your browser")
 
     while True:
         try:
@@ -53,7 +59,15 @@ def main():
             vis.update_x(state_est, state_vic)
             vis.update_heading(state_est, state_vic)
 
-            time.sleep(0.01) 
+            status_msg = (
+                f"vic_position: {state_vic[0]}, {state_vic[1]}, {state_vic[2]}\n"
+                f"vic_velocity: {state_vic[3]}, {state_vic[4]}, {state_vic[5]}\n"
+                f"vic_rotation: {state_vic[6]}, {state_vic[7]}, {state_vic[8]}\n"
+                f"vic_rotation: {state_vic[9]}, {state_vic[10]}, {state_vic[11]}\n"
+            )
+            vis.update_status(status_msg)
+
+            time.sleep(0.002) 
 
         except Exception as e:
             vis.shm_est.close()
