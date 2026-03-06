@@ -1,7 +1,7 @@
 import time
 import numpy as np
 
-from multiprocessing import shared_memory
+from multiprocessing import shared_memory, resource_tracker
 from include.quick_keyboard import QuickKeyboard
 from include.quick_mavlink import QuickMav
 from include.quick_vicon import QuickVicon
@@ -17,7 +17,7 @@ def main():
     keyboard.start()
 
     mav = QuickMav(
-        address="/dev/ttyTHS1",   
+            address="udpout:192.168.0.3:14561",   
         baudrate=921600,
         create=False
     )
@@ -25,6 +25,7 @@ def main():
 
     shm_vic = shared_memory.SharedMemory(name="vicon_state")
     vic_state = np.ndarray((13,), dtype=np.float64, buffer=shm_vic.buf)
+    resource_tracker.unregister(shm_vic._name, "shared_memory")
 
     try:
         while not keyboard.quit_flag:
@@ -73,11 +74,17 @@ def main():
 
     except KeyboardInterrupt:
         print("Interrupted by user")
+        keyboard.writer.close()
+        mav.master.close()
+        shm_vic.close()
+        time.sleep(2)
 
     finally:
         print("Shutting down...")
         keyboard.writer.close()
         mav.master.close()
+        shm_vic.close()
+        time.sleep(2)
 
 
 if __name__ == "__main__":
