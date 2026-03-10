@@ -9,7 +9,7 @@ from include.quick_viser import QuickViser
 
 
 def main():
-    LOOP_HZ = 400
+    LOOP_HZ = 100
     LOOP_PERIOD = 1.0 / LOOP_HZ
     next_time = time.perf_counter()
 
@@ -25,7 +25,7 @@ def main():
 
     shm_vic = shared_memory.SharedMemory(name="vicon_state")
     shm_init_vic = shared_memory.SharedMemory(name="vicon_init_state")
-    shm_state_sp = shared_memory.SharedMemory(name="joeystick_state_setpoint")
+    shm_state_sp = shared_memory.SharedMemory(name="joeystick_setpoint")
 
     vic_state = np.ndarray((13,), dtype=np.float64, buffer=shm_vic.buf)
     vic_init_state = np.ndarray((13,), dtype=np.float64, buffer=shm_init_vic.buf)
@@ -70,11 +70,10 @@ def main():
 
             if keyboard.traverse_square_flag:
                 mav.actTraverseSquare()
-                keyboard.traverse_square_flag = False
 
             if keyboard.manual_setpoint_flag:
-                mav.sendPositionTarget(current_t, state_sp[0], state_sp[1], state_sp[2])
-                keyboard.manual_setpoint_flag = False
+                mav.sendPositionTarget(current_t, state_sp[0], state_sp[1], -state_sp[2])
+                print(state_sp)
 
             mav.sendOdometry(
                     current_t,

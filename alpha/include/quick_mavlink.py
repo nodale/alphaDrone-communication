@@ -237,7 +237,7 @@ class QuickMav:
         self.setFlightmode("OFFBOARD")
 
     def setTo_lift(self, time):
-        self.sendPositionTarget(time, 0.0, 0.0, -0.1)
+        self.sendPositionTarget(time, 0.0, 0.0, -0.2)
 
     def setTo_land(self, time):
         self.sendPositionTarget(time, 0.0, 0.0, 0.0)
