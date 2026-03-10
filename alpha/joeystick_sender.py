@@ -48,6 +48,6 @@ while True:
         sock.sendto(packet, (UDP_IP, UDP_PORT))
         previous = setpoints
 
-        print(f"x:{x:.3f} y:{y:.3f} yaw:{twist:.3f} z:{throttle:.3f}")
+        print(f"x_sp(local) : {x:.3f}; y_sp (local) : {y:.3f}; yaw (global) : {twist:.3f}; z_sp (global) : {throttle:.3f}")
 
     time.sleep(0.01)

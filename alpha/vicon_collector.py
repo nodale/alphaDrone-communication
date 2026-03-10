@@ -17,8 +17,9 @@ def main():
 
             if data is not None:
                 vicon.update_state()
-                #print("Received state:", data)
 
+
+            #print("Received state:", vicon.shared_state.copy())
 
         except Exception as e:        
             #print("Error in main loop:", e)

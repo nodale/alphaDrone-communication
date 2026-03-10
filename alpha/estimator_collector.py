@@ -25,6 +25,7 @@ def main():
                 mav.est_odo = msg
                 mav.publish_odometry("estimated_state")
 
+            #print("states : ", mav.shared_state.copy())
             #time.sleep(0.01)
 
         except Exception as e:

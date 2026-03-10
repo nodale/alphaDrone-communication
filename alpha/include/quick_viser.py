@@ -19,9 +19,11 @@ class QuickViser:
     def __init__(self, port=8080, verbose=True):
         self.shm_est = shared_memory.SharedMemory(name="estimated_state")
         self.shm_vic = shared_memory.SharedMemory(name="vicon_state")
+        self.shm_state_sp = shared_memory.SharedMemory(name="joeystick_state_setpoint")
         
         self.est_state = np.ndarray((13,), dtype=np.float64, buffer=self.shm_est.buf)
         self.vic_state = np.ndarray((13,), dtype=np.float64, buffer=self.shm_vic.buf)
+        self.state_sp = np.ndarray((3,), dtype=np.float64, buffer=self.shm_state_sp.buf)
 
         #cross offset setup
         self.cross_offset = np.array([
@@ -57,6 +59,17 @@ class QuickViser:
             name="vicon",
             points=self.vic_odo_points,
             colors=(0, 0, 255),
+            point_size=self.POINT_SIZE,
+        )
+
+        #point clouds for the state setpoints
+        self.sp_points = np.zeros((self.MAX_POINTS, 3), dtype=np.float32)
+        self.sp_num_points = 0 
+
+        self.sp_point_cloud_handle = self.server.scene.add_point_cloud(
+            name="setpoint",
+            points=self.sp_points,
+            colors=(0, 255, 0),
             point_size=self.POINT_SIZE,
         )
 
@@ -131,7 +144,7 @@ class QuickViser:
         #add text debugs
         self.status_handle = self.server.gui.add_text("Status", " ", multiline=True, disabled=True)
 
-    def update_point_clouds(self, state_est, state_vic):
+    def update_point_clouds(self, state_est, state_vic, state_sp):
         if state_est is not None:
             if self.est_num_points < self.MAX_POINTS:
                 self.est_odo_points[self.est_num_points] = [state_est[0], state_est[1], state_est[2]]
@@ -151,6 +164,17 @@ class QuickViser:
                 self.vic_odo_points[-1] = [state_vic[0], state_vic[1], state_vic[2]]
 
             self.vicon_point_cloud_handle.points = self.vic_odo_points[:self.vic_num_points]
+        
+        if state_sp is not None:
+            #if self.sp_num_points < self.MAX_POINTS:
+            #    self.sp_points[self.sp_num_points] = [state_sp[0], state_sp[1], state_sp[2]]
+            #    self.sp_num_points += 1
+            #else:
+            #    self.sp_points[:-1] = self.sp_points[1:]
+            #    self.sp_points[-1] = [state_sp[0], state_sp[1], state_sp[2]]
+
+            #self.sp_point_cloud_handle.points = self.sp_points[:self.sp_num_points]
+            self.sp_point_cloud_handle.points = state_sp
 
     def update_velocity_lines(self, state_est, state_vic):
         if state_est is not None:

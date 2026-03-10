@@ -1,9 +1,8 @@
 import time
+import traceback
 import numpy as np
 
 from include.quick_viser import QuickViser
-
-import numpy as np
 
 ##################### PARAM #######################
 
@@ -50,11 +49,12 @@ def main():
         try:
             _state_est = vis.est_state.copy()
             _state_vic = vis.vic_state.copy()
+            _state_sp = vis.state_sp.copy()
 
             state_est = reform(_state_est)
             state_vic = reform(_state_vic)
 
-            vis.update_point_clouds(state_est, state_vic)
+            vis.update_point_clouds(state_est, state_vic, _state_sp)
             vis.update_velocity_lines(state_est, state_vic)
             vis.update_x(state_est, state_vic)
             vis.update_heading(state_est, state_vic)

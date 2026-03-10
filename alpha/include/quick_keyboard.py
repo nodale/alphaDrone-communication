@@ -21,6 +21,7 @@ class QuickKeyboard:
     set_to_active_flag : bool = False
     traverse_square_flag : bool = False
     traverse_eight_flag : bool = False
+    manual_setpoint_flag : bool = False
 
     def __init__(self, file="LOG.h5"):
         self.writer = h5py.File(file, "w")
@@ -59,6 +60,8 @@ class QuickKeyboard:
         print("Press 'v' + Enter to set the drone to traverse square")
         print("Press 'c' + Enter to set the drone to traverse eight")
 
+        print("Press 'x' + Enter to use manual setpoint")
+
     def _keyboard_listener(self):
         while not self.quit_flag:
             if sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
@@ -90,12 +93,14 @@ class QuickKeyboard:
                     self.set_to_land_flag = False
                     self.traverse_square_flag = False
                     self.traverse_eight_flag = False
+                    self.manual_setpoint_flag = False
                     print("SET TO LIFT")
                 if key.lower() == 'n':
                     self.set_to_lift_flag = False
                     self.set_to_land_flag = True
                     self.traverse_square_flag = False
                     self.traverse_eight_flag = False
+                    self.manual_setpoint_flag = False
                     print("SET TO LAND")
                 if key.lower() == 'b':
                     self.set_to_active_flag = True
@@ -105,13 +110,22 @@ class QuickKeyboard:
                     self.set_to_land_flag = False
                     self.traverse_square_flag = True
                     self.traverse_eight_flag = False
+                    self.manual_setpoint_flag = False
                     print("TRAVERSING SQUARE")
                 if key.lower() == 'c':
                     self.set_to_lift_flag = False
                     self.set_to_land_flag = False
                     self.traverse_square_flag = False
                     self.traverse_eight_flag = True
+                    self.manual_setpoint_flag = False
                     print("TRAVERSING EIGHT")
+                if key.lower() == 'x':
+                    self.set_to_lift_flag = False
+                    self.set_to_land_flag = False
+                    self.traverse_square_flag = False
+                    self.traverse_eight_flag = False
+                    self.manual_setpoint_flag = True
+                    print("USING MANUAL SETPOINT")
 
     def start(self):
         threading.Thread(target=self._keyboard_listener, daemon=True).start()
