@@ -9,7 +9,7 @@ from include.quick_viser import QuickViser
 
 
 def main():
-    LOOP_HZ = 100
+    LOOP_HZ = 400
     LOOP_PERIOD = 1.0 / LOOP_HZ
     next_time = time.perf_counter()
 
@@ -49,6 +49,8 @@ def main():
             if keyboard.reboot_flag:
                 mav.reboot()
                 keyboard.reboot_flag = False
+                vic_init_state[:3] = 0
+                time.sleep(0.1)
                 vic_init_state[:3] = vic_state[:3]  
 
             if keyboard.set_to_lift_flag:

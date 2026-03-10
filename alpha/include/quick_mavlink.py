@@ -22,11 +22,11 @@ class QuickMav:
         super().__init__(**kwargs)
 
         self.square_points = (
-                (0.5, 0.5, -0.3),
-                (0.5, -0.5, -0.3),
-                (-0.5, -0.5, -0.3),
-                (-0.5, 0.5, -0.3),
-                (0.0, 0.0, -0.3),
+                (0.5, 0.5, -0.14),
+                (0.5, -0.5, -0.14),
+                (-0.5, -0.5, -0.14),
+                (-0.5, 0.5, -0.14),
+                (0.0, 0.0, -0.14),
                 )
         self.square_progress = 0
 
@@ -264,6 +264,6 @@ class QuickMav:
 
         if dist < 0.01:
             self.eight_progress += 1
-            self.eight_points = (x_oscl * math.sin(omega * self.eight_progress), y_oscl * math.sin(2 * omega * self.eight_progress), -0.3)
+            self.eight_points = (x_oscl * math.sin(omega * self.eight_progress), y_oscl * math.sin(2 * omega * self.eight_progress), -0.14)
 
         self.sendPositionTarget(time, self.eight_points[0], self.eight_points[1], self.eight_points[2])

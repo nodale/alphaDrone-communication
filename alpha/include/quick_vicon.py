@@ -9,6 +9,7 @@ class QuickVicon:
     address: str = '10.183.217.138'
     port: int = 8020
     block: bool = False
+    dt: float = 0.025
 
     def __post_init__(self):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -27,6 +28,7 @@ class QuickVicon:
         self.init_state = np.zeros(13, dtype=np.float64)
         self.init_shm = shared_memory.SharedMemory(name="vicon_init_state", create=True, size=self.init_state.nbytes)
         self.init_shared_state = np.ndarray(self.init_state.shape, dtype=self.init_state.dtype, buffer=self.init_shm.buf)
+
     def get_data(self):
         try:
             payload, addr = self.sock.recvfrom(1024)
@@ -56,13 +58,13 @@ class QuickVicon:
         else:
             dt = timestamp - self.prev_time
         if dt > 0:
-            vel = (pos - self.prev_pos) / dt
+            vel = (pos - self.prev_pos) / self.dt
         else:
             vel = np.zeros(3)
 
         wx, wy, wz = np.zeros(3)
         if self.prev_time is not None and dt > 0:
-            wx, wy, wz = self.quaternion_to_angular_velocity(self.prev_quat, quat, dt)
+            wx, wy, wz = self.quaternion_to_angular_velocity(self.prev_quat, quat, self.dt)
 
         self.state[:3] = pos
         self.state[3:6] = vel
