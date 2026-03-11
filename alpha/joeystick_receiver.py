@@ -34,6 +34,7 @@ while True:
         shared_sp[:] = sp
 
         state_sp = vic_state[:2] + sp[:2]
+        state_sp[2], state_sp[3] = sp[2], sp[3]
         shared_state_sp[:] = state_sp
 
         print(f"x:{x:.3f} y:{y:.3f} yaw:{yaw:.3f} z:{z:.3f}")
