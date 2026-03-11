@@ -12,7 +12,7 @@ sock.bind((UDP_IP, UDP_PORT))
 
 sock.settimeout(0.1)
 
-print("Listening...")
+#print("Listening...")
 
 sp = np.zeros(4, dtype=np.float64)
 shm = shared_memory.SharedMemory(name="joeystick_setpoint", create=True, size=sp.nbytes)
@@ -30,14 +30,14 @@ while True:
         data, addr = sock.recvfrom(1024)
         x, y, yaw, z = struct.unpack("ffff", data)
 
-        sp[0], sp[1], sp[2], sp[3] = 0.1 * x, 0.1 * y, z, 0.2 * yaw
+        sp[0], sp[1], sp[2], sp[3] = 0.1 * x, 0.1 * y, -1.0 * z, 0.2 * yaw
         shared_sp[:] = sp
 
-        state_sp = vic_state[:2] + sp[:2]
+        state_sp[:2] = vic_state[:2] + sp[:2]
         state_sp[2], state_sp[3] = sp[2], sp[3]
         shared_state_sp[:] = state_sp
 
-        print(f"x:{x:.3f} y:{y:.3f} yaw:{yaw:.3f} z:{z:.3f}")
+        #print(f"x:{x:.3f} y:{y:.3f} yaw:{yaw:.3f} z:{z:.3f}")
 
     except socket.timeout:
         pass

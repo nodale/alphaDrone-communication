@@ -50,6 +50,7 @@ def main():
             _state_est = vis.est_state.copy()
             _state_vic = vis.vic_state.copy()
             _state_sp = vis.state_sp.copy()
+            print(_state_sp)
 
             state_est = reform(_state_est)
             state_vic = reform(_state_vic)

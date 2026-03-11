@@ -231,6 +231,19 @@ class QuickMav:
                 0, 0  #yaw yaw_rate
                 )
 
+    def sendPositionYawTarget(self, time, x, y, z, yaw): 
+        self.master.mav.set_position_target_local_ned_send(
+                time,
+                self.master.target_system,
+                self.master.target_component,
+                mavutil.mavlink.MAV_FRAME_LOCAL_NED,
+                0b0000001111111000,
+                x, y, z,  #position
+                0, 0, 0,  #velocity
+                0, 0, 0,  #acceleration
+                yaw, 0  #yaw yaw_rate
+                )
+
     def setTo_active(self):
         self.setFlightmode("EXTERNAL1")
         time.sleep(0.1)

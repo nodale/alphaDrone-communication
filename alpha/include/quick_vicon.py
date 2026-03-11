@@ -22,6 +22,9 @@ class QuickVicon:
         self.prev_quat = np.array([1.0, 0.0, 0.0, 0.0], dtype=np.float64)  # w, x, y, z
         self.prev_time = None
 
+        self.filtered_vel = np.zeros(3, dtype=np.float64)
+        self.filtered_omega = np.zeros(3, dtype=np.float64)
+
         self.shm = shared_memory.SharedMemory(name="vicon_state", create=True, size=self.state.nbytes)
         self.shared_state = np.ndarray(self.state.shape, dtype=self.state.dtype, buffer=self.shm.buf)
 

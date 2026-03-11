@@ -69,11 +69,10 @@ def main():
                 keyboard.set_to_active_flag = False
 
             if keyboard.traverse_square_flag:
-                mav.actTraverseSquare()
+                mav.act_traverseSquare(current_t, (vic_state[0], vic_state[1], vic_state[2]))
 
             if keyboard.manual_setpoint_flag:
-                mav.sendPositionTarget(current_t, state_sp[0], state_sp[1], -state_sp[2])
-                print(state_sp)
+                mav.sendPositionYawTarget(current_t, state_sp[0], state_sp[1], state_sp[2], state_sp[3])
 
             mav.sendOdometry(
                     current_t,
