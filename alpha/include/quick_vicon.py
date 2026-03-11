@@ -10,6 +10,8 @@ class QuickVicon:
     port: int = 8020
     block: bool = False
     dt: float = 0.025
+    alpha_vel: float = 0.25 
+    alpha_omega: float = 0.25
 
     def __post_init__(self):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -57,22 +59,22 @@ class QuickVicon:
             return False 
 
         if self.prev_time is None:
-            dt = 0.0
+            dt = self.dt
+            vel = np.zeros(3)
+            wx, wy, wz = np.zeros(3)
         else:
             dt = timestamp - self.prev_time
-        if dt > 0:
-            vel = (pos - self.prev_pos) / self.dt
-        else:
-            vel = np.zeros(3)
+            dt = max(dt, 1e-6)
+            vel = (pos - self.prev_pos) / dt
+            wx, wy, wz = self.quaternion_to_angular_velocity(self.prev_quat, quat, dt)
 
-        wx, wy, wz = np.zeros(3)
-        if self.prev_time is not None and dt > 0:
-            wx, wy, wz = self.quaternion_to_angular_velocity(self.prev_quat, quat, self.dt)
+        self.filtered_vel = self.alpha_vel * vel + (1 - self.alpha_vel) * self.filtered_vel
+        self.filtered_omega = self.alpha_omega * np.array([wx, wy, wz]) + (1 - self.alpha_omega) * self.filtered_omega
 
         self.state[:3] = pos
-        self.state[3:6] = vel
-        self.state[6:10] = quat  # qw, qx, qy, qz
-        self.state[10:13] = [wx, wy, wz]
+        self.state[3:6] = self.filtered_vel
+        self.state[6:10] = quat
+        self.state[10:13] = self.filtered_omega
 
         _state = self.state - self.init_shared_state
         self.shared_state[:] = _state
