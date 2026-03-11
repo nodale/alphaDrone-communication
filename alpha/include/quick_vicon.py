@@ -9,9 +9,9 @@ class QuickVicon:
     address: str = '10.183.217.138'
     port: int = 8020
     block: bool = False
-    dt: float = 0.025
-    alpha_vel: float = 0.25 
-    alpha_omega: float = 0.25
+    dt: float = 0.0125
+    alpha_vel: float = 0.2 
+    alpha_omega: float = 0.2
 
     def __post_init__(self):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -23,9 +23,6 @@ class QuickVicon:
         self.prev_pos = np.zeros(3, dtype=np.float64)
         self.prev_quat = np.array([1.0, 0.0, 0.0, 0.0], dtype=np.float64)  # w, x, y, z
         self.prev_time = None
-
-        self.filtered_vel = np.zeros(3, dtype=np.float64)
-        self.filtered_omega = np.zeros(3, dtype=np.float64)
 
         self.shm = shared_memory.SharedMemory(name="vicon_state", create=True, size=self.state.nbytes)
         self.shared_state = np.ndarray(self.state.shape, dtype=self.state.dtype, buffer=self.shm.buf)
@@ -56,31 +53,38 @@ class QuickVicon:
     def update_state(self):
         timestamp, pos, quat = self.get_data()
         if pos is None:
-            return False 
+            return False
 
         if self.prev_time is None:
             dt = self.dt
             vel = np.zeros(3)
             wx, wy, wz = np.zeros(3)
+            self.filtered_pos = pos.copy()
+            self.filtered_quat = quat.copy()
         else:
-            dt = timestamp - self.prev_time
-            dt = max(dt, 1e-6)
-            vel = (pos - self.prev_pos) / dt
-            wx, wy, wz = self.quaternion_to_angular_velocity(self.prev_quat, quat, dt)
+            #dt = timestamp - self.prev_time
+            #dt = max(dt, 1e-6)
+            dt = self.dt
 
-        self.filtered_vel = self.alpha_vel * vel + (1 - self.alpha_vel) * self.filtered_vel
-        self.filtered_omega = self.alpha_omega * np.array([wx, wy, wz]) + (1 - self.alpha_omega) * self.filtered_omega
+            self.filtered_pos = self.alpha_vel * pos + (1 - self.alpha_vel) * self.filtered_pos
+            self.filtered_quat = self.filtered_quat + self.alpha_omega * (quat - self.filtered_quat)
+            self.filtered_quat /= np.linalg.norm(self.filtered_quat)
+
+            vel = (self.filtered_pos - self.prev_filtered_pos) / dt
+            wx, wy, wz = self.quaternion_to_angular_velocity(self.prev_filtered_quat, self.filtered_quat, dt)
 
         self.state[:3] = pos
-        self.state[3:6] = self.filtered_vel
+        self.state[3:6] = vel
         self.state[6:10] = quat
-        self.state[10:13] = self.filtered_omega
+        self.state[10:13] = np.array([wx, wy, wz])
 
         _state = self.state - self.init_shared_state
         self.shared_state[:] = _state
 
         self.prev_pos = pos
         self.prev_quat = quat
+        self.prev_filtered_pos = self.filtered_pos.copy()
+        self.prev_filtered_quat = self.filtered_quat.copy()
         self.prev_time = timestamp
 
         return True

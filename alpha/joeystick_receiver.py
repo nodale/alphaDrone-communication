@@ -30,10 +30,23 @@ while True:
         data, addr = sock.recvfrom(1024)
         x, y, yaw, z = struct.unpack("ffff", data)
 
-        sp[0], sp[1], sp[2], sp[3] = 0.1 * x, 0.1 * y, -1.0 * z, 0.2 * yaw
+        sp[2], sp[3] = -1.0 * z, 0.2 * yaw
+
+        _x = abs(x)
+        _y = abs(y)
+
+        if _x > 0.2:
+            state_sp[0] += 0.01 * x
+        else:
+            state_sp[0] += 0.0
+
+        if _y > 0.2:
+            state_sp[1] += 0.01 * y
+        else:
+            state_sp[1] += 0.0
+
         shared_sp[:] = sp
 
-        state_sp[:2] = vic_state[:2] + sp[:2]
         state_sp[2], state_sp[3] = sp[2], sp[3]
         shared_state_sp[:] = state_sp
 

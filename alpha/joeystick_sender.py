@@ -18,13 +18,13 @@ print("Joystick:", joystick.get_name())
 
 previous = None
 
-def changed(a, b, threshold=0.02):
-    if b is None:
-        return True
-    for i in range(len(a)):
-        if abs(a[i] - b[i]) > threshold:
-            return True
-    return False
+#def changed(a, b, threshold=0.02):
+#    if b is None:
+#        return True
+#    for i in range(len(a)):
+#        if abs(a[i] - b[i]) > threshold:
+#            return True
+#    return False
 
 while True:
     pygame.event.pump()
@@ -41,13 +41,13 @@ while True:
 
     setpoints = (x, y, twist, throttle)
 
-    if changed(setpoints, previous):
+#    if changed(setpoints, previous):
 
-        packet = struct.pack("ffff", x, y, twist, throttle)
+    packet = struct.pack("ffff", x, y, twist, throttle)
 
-        sock.sendto(packet, (UDP_IP, UDP_PORT))
-        previous = setpoints
+    sock.sendto(packet, (UDP_IP, UDP_PORT))
+    previous = setpoints
 
-        print(f"x_sp(local) : {x:.3f}; y_sp (local) : {y:.3f}; yaw (global) : {twist:.3f}; z_sp (global) : {throttle:.3f}")
+    print(f"x_sp(local) : {x:.3f}; y_sp (local) : {y:.3f}; yaw (global) : {twist:.3f}; z_sp (global) : {throttle:.3f}")
 
     time.sleep(0.01)
