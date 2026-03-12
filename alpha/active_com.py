@@ -25,7 +25,7 @@ def main():
 
     shm_vic = shared_memory.SharedMemory(name="vicon_state")
     shm_init_vic = shared_memory.SharedMemory(name="vicon_init_state")
-    shm_state_sp = shared_memory.SharedMemory(name="joeystick_setpoint")
+    shm_state_sp = shared_memory.SharedMemory(name="joeystick_state_setpoint")
 
     vic_state = np.ndarray((13,), dtype=np.float64, buffer=shm_vic.buf)
     vic_init_state = np.ndarray((13,), dtype=np.float64, buffer=shm_init_vic.buf)
@@ -52,7 +52,7 @@ def main():
                 keyboard.force_kill_flag = False
 
             if keyboard.reboot_flag:
-                mav.reboot()
+                mav.forceReboot()
                 keyboard.reboot_flag = False
                 vic_init_state[:3] = 0
                 time.sleep(0.1)
@@ -70,6 +70,9 @@ def main():
 
             if keyboard.traverse_square_flag:
                 mav.act_traverseSquare(current_t, (vic_state[0], vic_state[1], vic_state[2]))
+
+            if keyboard.traverse_eight_flag:
+                mav.act_traverseEight(current_t, (vic_state[0], vic_state[1], vic_state[2]))
 
             if keyboard.manual_setpoint_flag:
                 mav.sendPositionYawTarget(current_t, state_sp[0], state_sp[1], state_sp[2], state_sp[3])

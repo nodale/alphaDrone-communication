@@ -22,11 +22,11 @@ class QuickMav:
         super().__init__(**kwargs)
 
         self.square_points = (
-                (0.5, 0.5, -0.14),
-                (0.5, -0.5, -0.14),
-                (-0.5, -0.5, -0.14),
-                (-0.5, 0.5, -0.14),
-                (0.0, 0.0, -0.14),
+                (0.4, 0.4, -0.18),
+                (0.4, -0.4, -0.18),
+                (-0.4, -0.4, -0.18),
+                (-0.4, 0.4, -0.18),
+                (0.0, 0.0, -0.18),
                 )
         self.square_progress = 0
 
@@ -256,27 +256,33 @@ class QuickMav:
         self.sendPositionTarget(time, 0.0, 0.0, 0.0)
 
     def act_traverseSquare(self, time, current_pos):
-        dist = self.square_points[self.square_progress][0] - current_pos[0] + self.square_points[self.square_progress][1] - current_pos[1] + self.square_points[self.square_progress][2] - current_pos[2]
+        target = self.square_points[self.square_progress]
 
-        if dist < 0.05:
+        dist = math.dist(current_pos, target)
+
+        if dist < 0.08:
             self.square_progress += 1
 
             if self.square_progress > 3:
                 self.square_progress = 0
 
-        
-        self.sendPositionTarget(time, self.square_points[self.square_progress][0], self.square_points[self.square_progress][1], self.square_points[self.square_progress][2])
+            target = self.square_points[self.square_progress]
 
+        self.sendPositionTarget(time, target[0], target[1], target[2])
 
     def act_traverseEight(self, time, current_pos):
-        x_oscl = 0.6
-        y_oscl = 0.6
-        omega = 0.02
+        x_oscl = 0.5
+        y_oscl = 0.5
+        omega = 0.01
 
-        dist = self.eight_points[0] - current_pos[0] + self.eight_points[1] - current_pos[1] + self.eight_points[2] - current_pos[2]
+        dist = math.dist(current_pos, self.eight_points)
 
         if dist < 0.01:
             self.eight_progress += 1
-            self.eight_points = (x_oscl * math.sin(omega * self.eight_progress), y_oscl * math.sin(2 * omega * self.eight_progress), -0.14)
+            self.eight_points = (
+                x_oscl * math.sin(omega * self.eight_progress),
+                y_oscl * math.sin(2 * omega * self.eight_progress),
+                -0.14
+            )
 
-        self.sendPositionTarget(time, self.eight_points[0], self.eight_points[1], self.eight_points[2])
+        self.sendPositionTarget(time, *self.eight_points)
