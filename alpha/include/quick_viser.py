@@ -19,7 +19,7 @@ class QuickViser:
     def __init__(self, port=8080, verbose=True):
         self.shm_est = shared_memory.SharedMemory(name="estimated_state")
         self.shm_vic = shared_memory.SharedMemory(name="vicon_state")
-        self.shm_state_sp = shared_memory.SharedMemory(name="joeystick_state_setpoint")
+        self.shm_state_sp = shared_memory.SharedMemory(name="general_setpoint")
         
         self.est_state = np.ndarray((13,), dtype=np.float64, buffer=self.shm_est.buf)
         self.vic_state = np.ndarray((13,), dtype=np.float64, buffer=self.shm_vic.buf)

@@ -2,7 +2,8 @@ from dataclasses import dataclass
 
 from pymavlink import mavutil
 from pymavlink.dialects.v20 import common as mavlink2
-from multiprocessing import shared_memory
+from multiprocessing import shared_memory, resource_tracker
+
 import numpy as np
 
 import time
@@ -16,7 +17,7 @@ class QuickMav:
     def __init__(self, address, baudrate, create=False, **kwargs):
         self.timeBoot = time.time()
         try:
-            self.master = mavutil.mavlink_connection(address, baudrate, robust_parsing=True, source_system=255, source_component=0, autoreconnect=True, source_port=14552, udp_timeout=1)
+            self.master = mavutil.mavlink_connection(address, baudrate, robust_parsing=True, source_system=255, source_component=0, autoreconnect=True, udp_timeout=1)
         except:
             print("error in __init__, MAVlink refuses to connect, maybe wrong address or baudrate")
         super().__init__(**kwargs)
@@ -37,6 +38,9 @@ class QuickMav:
             self.state = np.array([0.0]*13, dtype=np.float64)
             self.shm = shared_memory.SharedMemory(name="estimated_state", create=True, size=self.state.nbytes)
             self.shared_state = np.ndarray(self.state.shape, dtype=self.state.dtype, buffer=self.shm.buf)
+
+        self.shm_general_sp = shared_memory.SharedMemory(name="general_setpoint")
+        self.general_sp = np.ndarray((3,), dtype=np.float64, buffer=self.shm_general_sp.buf)
 
     def __del__(self):
         self.master.close()
@@ -63,15 +67,15 @@ class QuickMav:
         except:
             print("sending heartbeat failed :(")
 
-        self.master.mav.command_long_send(
-                self.master.target_system,
-                self.master.target_component,
-                mavutil.mavlink.MAV_CMD_SET_MESSAGE_INTERVAL,  
-                0,                                             
-                44001,  #this is for johnny_status                          
-                50,                                   
-                0, 0, 0, 0, 0                                  
-                )
+        #self.master.mav.command_long_send(
+        #        self.master.target_system,
+        #        self.master.target_component,
+        #        mavutil.mavlink.MAV_CMD_SET_MESSAGE_INTERVAL,  
+        #        0,                                             
+        #        44001,  #this is for johnny_status                          
+        #        2,                                   
+        #        0, 0, 0, 0, 0                                  
+        #        )
 
         self.master.mav.command_long_send(
                 self.master.target_system,
@@ -79,17 +83,27 @@ class QuickMav:
                 mavutil.mavlink.MAV_CMD_SET_MESSAGE_INTERVAL,  
                 0,                                             
                 331,    #odometry
-                50,                                   
+                100,    #this is the udpate frwq, apparently putting it to a lowervalue breaks it                               
                 0, 0, 0, 0, 0                                  
                 )
+
+        #self.master.mav.command_long_send(
+        #        self.master.target_system,
+        #        self.master.target_component,
+        #        mavutil.mavlink.MAV_CMD_SET_MESSAGE_INTERVAL,  
+        #        0,                                             
+        #        50,      #sys_status for amp and voltage              
+        #        1,                                   
+        #        0, 0, 0, 0, 0                                  
+        #        )
 
         self.master.mav.command_long_send(
                 self.master.target_system,
                 self.master.target_component,
                 mavutil.mavlink.MAV_CMD_SET_MESSAGE_INTERVAL,  
                 0,                                             
-                50,      #sys_status for amp and voltage              
-                10,                                   
+                85,      #setpoints
+                80,                                   
                 0, 0, 0, 0, 0                                  
                 )
 
@@ -150,12 +164,16 @@ class QuickMav:
         return self.master.recv_match(type=TYPE, blocking=block, timeout=0.1)
 
     def getOdometry(self, block=False):
-        self.est_odo = self.master.get("ODOMETRY", block=block)
+        self.est_odo = self.get("ODOMETRY", block=block)
         return self.est_odo
 
     def getJohnny(self, block=False):
-        johnny = self.master.get("JOHNNY_STATUS", block=block)
+        johnny = self.get("JOHNNY_STATUS", block=block)
         return johnny
+
+    def getSetpoint(self, block=False):
+        sp = self.get("POSITION_TARGET_LOCAL_NED", block=block)
+        return sp
 
     def publish_odometry(self, name):
         x, y, z = self.est_odo.x, self.est_odo.y, self.est_odo.z
@@ -230,6 +248,7 @@ class QuickMav:
                 0, 0, 0,  #acceleration
                 0, 0  #yaw yaw_rate
                 )
+        self.general_sp[:] = (x, y, z)
 
     def sendPositionYawTarget(self, time, x, y, z, yaw): 
         self.master.mav.set_position_target_local_ned_send(
@@ -243,6 +262,7 @@ class QuickMav:
                 0, 0, 0,  #acceleration
                 yaw, 0  #yaw yaw_rate
                 )
+        self.general_sp[:] = (x, y, z)
 
     def setTo_active(self):
         self.setFlightmode("OFFBOARD")

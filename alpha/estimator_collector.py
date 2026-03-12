@@ -11,9 +11,6 @@ def main():
         create=True
     )
 
-    print("Waiting for MAVLink heartbeat...")
-    mav.master.wait_heartbeat()
-    print("Connected to system:", mav.master.target_system)
 
     mav.sendHeartbeat()
 
@@ -29,10 +26,13 @@ def main():
             #time.sleep(0.01)
 
         except Exception as e:
-            #print("Error in main loop:", e)
+            print("Error in main loop:", e)
             mav.shm.close()
             mav.shm.unlink()
+            mav.shm_general_sp.close()
+            mav.shm_general_sp.unlink()
             traceback.print_exc()
+
             #time.sleep(1)
 
     #except KeyboardInterrupt:

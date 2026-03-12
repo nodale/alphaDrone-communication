@@ -22,6 +22,11 @@ state_sp = np.zeros(4, dtype=np.float64)
 state_shm = shared_memory.SharedMemory(name="joeystick_state_setpoint", create=True, size=state_sp.nbytes)
 shared_state_sp = np.ndarray(state_sp.shape, dtype=state_sp.dtype, buffer=state_shm.buf)
 
+general_sp = np.zeros(3, dtype=np.float64)
+general_shm = shared_memory.SharedMemory(name="general_setpoint", create=True, size=general_sp.nbytes)
+general_shared_sp = np.ndarray(general_sp.shape, dtype=general_sp.dtype, buffer=general_shm.buf)
+general_shared_sp[:] = general_sp
+
 shm_vic = shared_memory.SharedMemory(name="vicon_state")
 vic_state = np.ndarray((13,), dtype=np.float64, buffer=shm_vic.buf)
 

@@ -50,7 +50,6 @@ def main():
             _state_est = vis.est_state.copy()
             _state_vic = vis.vic_state.copy()
             _state_sp = vis.state_sp.copy()
-            print(_state_sp)
 
             state_est = reform(_state_est)
             state_vic = reform(_state_vic)
@@ -62,9 +61,9 @@ def main():
 
             status_msg = (
                 f"vic_position: {state_vic[0]}, {state_vic[1]}, {state_vic[2]}\n"
-                f"vic_velocity: {state_vic[3]}, {state_vic[4]}, {state_vic[5]}\n"
                 f"vic_rotation: {state_vic[6]}, {state_vic[7]}, {state_vic[8]}\n"
-                f"vic_rotation: {state_vic[9]}, {state_vic[10]}, {state_vic[11]}\n"
+                f"est_position: {state_est[0]}, {state_est[1]}, {state_est[2]}\n"
+                f"est_rotation: {state_est[6]}, {state_est[7]}, {state_est[8]}\n"
             )
             vis.update_status(status_msg)
 
