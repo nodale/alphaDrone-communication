@@ -245,12 +245,12 @@ class QuickMav:
                 )
 
     def setTo_active(self):
-        self.setFlightmode("EXTERNAL1")
-        time.sleep(0.1)
         self.setFlightmode("OFFBOARD")
+        time.sleep(0.1)
+        self.setFlightmode("EXTERNAL1")
 
     def setTo_lift(self, time):
-        self.sendPositionTarget(time, 0.0, 0.0, -0.2)
+        self.sendPositionYawTarget(time, 0.0, 0.0, -0.2, 0.0)
 
     def setTo_land(self, time):
         self.sendPositionTarget(time, 0.0, 0.0, 0.0)
@@ -268,7 +268,7 @@ class QuickMav:
 
             target = self.square_points[self.square_progress]
 
-        self.sendPositionTarget(time, target[0], target[1], target[2])
+        self.sendPositionYawTarget(time, target[0], target[1], target[2], 0.0)
 
     def act_traverseEight(self, time, current_pos):
         x_oscl = 0.5
@@ -285,4 +285,4 @@ class QuickMav:
                 -0.14
             )
 
-        self.sendPositionTarget(time, *self.eight_points)
+        self.sendPositionYawTarget(time, *self.eight_points, 0.0)

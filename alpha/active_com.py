@@ -52,7 +52,7 @@ def main():
                 keyboard.force_kill_flag = False
 
             if keyboard.reboot_flag:
-                mav.forceReboot()
+                #mav.reboot() #disabled for now
                 keyboard.reboot_flag = False
                 vic_init_state[:3] = 0
                 time.sleep(0.1)
