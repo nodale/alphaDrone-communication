@@ -1,4 +1,4 @@
-import zenog, random, time
+import zenoh, random, time
 import numpy as np
 from vicon_dssdk import ViconDataStream
 
@@ -7,7 +7,7 @@ TARGET_PORT = 8020
 client = ViconDataStream.Client()
 while True:
     try:
-        client.Connect(args.host)
+        client.Connect("localhost:801")
         break
     except ViconDataStream.DataStreamException:
         time.sleep(1)
