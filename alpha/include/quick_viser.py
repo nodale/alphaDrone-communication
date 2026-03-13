@@ -166,14 +166,6 @@ class QuickViser:
             self.vicon_point_cloud_handle.points = self.vic_odo_points[:self.vic_num_points]
         
         if state_sp is not None:
-            #if self.sp_num_points < self.MAX_POINTS:
-            #    self.sp_points[self.sp_num_points] = [state_sp[0], state_sp[1], state_sp[2]]
-            #    self.sp_num_points += 1
-            #else:
-            #    self.sp_points[:-1] = self.sp_points[1:]
-            #    self.sp_points[-1] = [state_sp[0], state_sp[1], state_sp[2]]
-
-            #self.sp_point_cloud_handle.points = self.sp_points[:self.sp_num_points]
             self.sp_point_cloud_handle.points = state_sp
 
     def update_velocity_lines(self, state_est, state_vic):
@@ -293,6 +285,16 @@ class QuickViser:
             self.heading_line_vic[0, 0] = pos
             self.heading_line_vic[0, 1] = pos + heading * scale
             self.heading_handle_vic.points = self.heading_line_vic
+
+    def update_obstacles(self, state_boxes):
+        for box in state_boxes:
+            self.server.scene.add_box(
+                name=f"/box_{box[0]}",
+                dimensions=(0.2, 0.2, 0.2),
+                position=box[0:3],
+                wxyz=box[6:10],
+                color=(5, 5, 5)
+            )
 
     def update_status(self, msg):
             self.status_handle.value = msg

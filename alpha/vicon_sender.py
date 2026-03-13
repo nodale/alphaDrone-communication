@@ -14,7 +14,7 @@ TARGET_IP   = "10.183.217.138"
 TARGET_PORT = 8020
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-packer = msgpack.Packer(use_bin_type=False)
+packer = msgpack.Packer(use_bin_type=True)
 
 def send_msg(payload):
     sock.sendto(payload, (TARGET_IP, TARGET_PORT))
@@ -32,6 +32,7 @@ while True:
 client.SetBufferSize(1)
 client.EnableSegmentData()
 client.SetStreamMode(ViconDataStream.Client.StreamMode.EServerPush)
+
 client.SetAxisMapping(
     ViconDataStream.Client.AxisMapping.EForward,
     ViconDataStream.Client.AxisMapping.ERight,
@@ -39,30 +40,46 @@ client.SetAxisMapping(
 )
 
 client.GetFrame()
-subject = client.GetSubjectNames()[0]
-segment = client.GetSegmentNames(subject)[0]
+
+object_name = (
+    "Mr_Obstacle",
+    "Mrs_Obstacle"
+)
 
 seq = 0
 while True:
+
     client.GetFrame()
 
-    (x_mm, y_mm, z_mm) = client.GetSegmentGlobalTranslation(subject, segment)[0]
-    q_raw, _ = client.GetSegmentGlobalRotationQuaternion(subject, segment)
-    #quaternion is ararnged as : qx, qy, qz, qw
-    #we will send it as : qw, qx, qy, qz to have less processing in the jetoson
+    timestamp = int(time.time() * 1e6)
+    objects_data = []
 
-    #just truning it from mm to m
-    x = x_mm * 0.001
-    y = y_mm * 0.001
-    z = z_mm * 0.001
+    for obj_id, name in enumerate(object_name):
+
+        (x_mm, y_mm, z_mm) = client.GetSegmentGlobalTranslation(name, name)[0]
+        q_raw, _ = client.GetSegmentGlobalRotationQuaternion(name, name)
+
+        x = x_mm * 0.001
+        y = y_mm * 0.001
+        z = z_mm * 0.001
+
+        qw = q_raw[3]
+        qx = q_raw[0]
+        qy = q_raw[1]
+        qz = q_raw[2]
+
+        objects_data.append([
+            obj_id,
+            x, y, z,
+            qw, qx, qy, qz
+        ])
 
     msg = (
         seq,
-        int(time.time() * 1e6),
-        x, y, z,
-        q_raw[3], q_raw[0], q_raw[1], q_raw[2],
+        timestamp,
+        objects_data
     )
-    
+
     payload = packer.pack(msg)
     send_msg(payload)
 

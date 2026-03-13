@@ -18,28 +18,14 @@ def main():
             if data is not None:
                 vicon.update_state()
 
-
             #print("Received state:", vicon.shared_state.copy())
 
         except Exception as e:        
-            #print("Error in main loop:", e)
+            print("Error in main loop:", e)
             vicon.sock.close()
             vicon.shm.close()
             vicon.shm.unlink()
             traceback.print_exc()
-
-    #except KeyboardInterrupt:
-    #    #print("\nStopping Vicon listener...")
-    #    vicon.sock.close()
-    #    vicon.shm.close()
-    #    vicon.shm.unlink()
-    #    time.sleep(1)
-
-    #finally:
-    #    vicon.sock.close()
-    #    vicon.shm.close()
-    #    vicon.shm.unlink()
-    #    time.sleep(1)
 
 
 if __name__ == "__main__":

@@ -24,7 +24,7 @@ def reform(state):
 
     sinp = 2.0 * (qw * qy - qz * qx)
     if abs(sinp) >= 1:
-        pitch = np.sign(sinp) * np.pi / 2  # gimbal lock
+        pitch = np.sign(sinp) * np.pi / 2 
     else:
         pitch = np.arcsin(sinp)
 
@@ -42,14 +42,12 @@ def main():
         verbose=False
     )
 
-    #print("Viser server running...")
-    #print("Open http://localhost:8080 in your browser")
-
     while True:
         try:
             _state_est = vis.est_state.copy()
-            _state_vic = vis.vic_state.copy()
+            _state_vic = vis.vic_state[0].copy()
             _state_sp = vis.state_sp.copy()
+            _state_box = vis.vic_state[1:].copy()
 
             state_est = reform(_state_est)
             state_vic = reform(_state_vic)
@@ -58,6 +56,7 @@ def main():
             vis.update_velocity_lines(state_est, state_vic)
             vis.update_x(state_est, state_vic)
             vis.update_heading(state_est, state_vic)
+            vis.update_boxes(_state_box)
 
             status_msg = (
                 f"vic_position: {state_vic[0]}, {state_vic[1]}, {state_vic[2]}\n"
