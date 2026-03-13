@@ -8,15 +8,12 @@ def main():
     vicon = QuickVicon(
         address="10.183.217.138",
         port=8020,
-        block=False
+        block=True
     )
 
     while True:
         try:
-            data = vicon.get_data()
-
-            if data is not None:
-                vicon.update_state()
+            vicon.update_state()
 
             #print("Received state:", vicon.shared_state.copy())
 
@@ -25,6 +22,8 @@ def main():
             vicon.sock.close()
             vicon.shm.close()
             vicon.shm.unlink()
+            vicon.init_shm.close()
+            vicon.init_shm.unlink()
             traceback.print_exc()
 
 

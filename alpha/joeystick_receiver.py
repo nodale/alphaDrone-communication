@@ -59,3 +59,12 @@ while True:
 
     except socket.timeout:
         pass
+
+    except Exception as e:        
+        print("Error in main loop:", e)
+        shm_vic.close()
+        shm_vic.unlink()
+        general_shm.close()
+        general_shm.unlink()
+        state_shm.close()
+        state_shm.unlink()

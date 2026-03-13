@@ -280,7 +280,7 @@ class QuickMav:
 
         dist = math.dist(current_pos, target)
 
-        if dist < 0.08:
+        if dist < 0.01:
             self.square_progress += 1
 
             if self.square_progress > 3:
@@ -293,7 +293,7 @@ class QuickMav:
     def act_traverseEight(self, time, current_pos):
         x_oscl = 0.5
         y_oscl = 0.5
-        omega = 0.01
+        omega = 0.04
 
         dist = math.dist(current_pos, self.eight_points)
 

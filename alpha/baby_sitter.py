@@ -41,7 +41,6 @@ def main():
         port=PORT,
         verbose=False
     )
-
     while True:
         try:
             _state_est = vis.est_state.copy()
@@ -56,7 +55,7 @@ def main():
             vis.update_velocity_lines(state_est, state_vic)
             vis.update_x(state_est, state_vic)
             vis.update_heading(state_est, state_vic)
-            vis.update_boxes(_state_box)
+            vis.update_obstacles(_state_box)
 
             status_msg = (
                 f"vic_position: {state_vic[0]}, {state_vic[1]}, {state_vic[2]}\n"
@@ -70,7 +69,11 @@ def main():
 
         except Exception as e:
             vis.shm_est.close()
+            vis.shm_est.unlink()
             vis.shm_vic.close()
+            vis.shm_vic.unlink()
+            vis.shm_state_sp.close()
+            vis.shm_state_sp.unlink()
             traceback.print_exc()
             time.sleep(1)
 

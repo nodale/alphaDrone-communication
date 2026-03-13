@@ -22,7 +22,7 @@ class QuickViser:
         self.shm_state_sp = shared_memory.SharedMemory(name="general_setpoint")
         
         self.est_state = np.ndarray((13,), dtype=np.float64, buffer=self.shm_est.buf)
-        self.vic_state = np.ndarray((13,), dtype=np.float64, buffer=self.shm_vic.buf)
+        self.vic_state = np.ndarray((2,13), dtype=np.float64, buffer=self.shm_vic.buf)
         self.state_sp = np.ndarray((3,), dtype=np.float64, buffer=self.shm_state_sp.buf)
 
         #cross offset setup
@@ -287,14 +287,35 @@ class QuickViser:
             self.heading_handle_vic.points = self.heading_line_vic
 
     def update_obstacles(self, state_boxes):
-        for box in state_boxes:
-            self.server.scene.add_box(
-                name=f"/box_{box[0]}",
-                dimensions=(0.2, 0.2, 0.2),
-                position=box[0:3],
-                wxyz=box[6:10],
-                color=(5, 5, 5)
-            )
+        if not hasattr(self, 'obstacle_boxes'):
+            self.obstacle_boxes = {}
+
+        current_boxes = set()
+
+        for i, box in enumerate(state_boxes):
+            name = f"box_{i}"
+            current_boxes.add(name)
+
+            if name in self.obstacle_boxes:
+                # update existing box
+                handle = self.obstacle_boxes[name]
+                handle.position = box[0:3]
+                handle.wxyz = box[6:10]
+            else:
+                # add new box
+                handle = self.server.scene.add_box(
+                    name=name,
+                    dimensions=(0.2, 0.2, 0.2),
+                    position=box[0:3],
+                    wxyz=box[6:10],
+                    color=(5, 5, 5)
+                )
+                self.obstacle_boxes[name] = handle
+
+        for old_name in list(self.obstacle_boxes.keys()):
+            if old_name not in current_boxes:
+                self.server.scene.remove(old_name)
+                del self.obstacle_boxes[old_name]
 
     def update_status(self, msg):
             self.status_handle.value = msg
