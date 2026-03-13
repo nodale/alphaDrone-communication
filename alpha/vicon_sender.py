@@ -1,27 +1,10 @@
-from __future__ import print_function
-import argparse
-import time
-import socket
+import zenog, random, time
 import numpy as np
-import msgpack
 from vicon_dssdk import ViconDataStream
-
-parser = argparse.ArgumentParser()
-parser.add_argument('host', nargs='?', default="localhost:801")
-args = parser.parse_args()
 
 TARGET_IP   = "10.183.217.138"
 TARGET_PORT = 8020
-sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-
-packer = msgpack.Packer(use_bin_type=True)
-
-def send_msg(payload):
-    sock.sendto(payload, (TARGET_IP, TARGET_PORT))
-
 client = ViconDataStream.Client()
-
-print(f"Connecting to Vicon at {args.host} ...")
 while True:
     try:
         client.Connect(args.host)
@@ -32,25 +15,26 @@ while True:
 client.SetBufferSize(1)
 client.EnableSegmentData()
 client.SetStreamMode(ViconDataStream.Client.StreamMode.EServerPush)
-
 client.SetAxisMapping(
     ViconDataStream.Client.AxisMapping.EForward,
     ViconDataStream.Client.AxisMapping.ERight,
     ViconDataStream.Client.AxisMapping.EDown
 )
-
 client.GetFrame()
-
 object_name = (
     "Mr_Obstacle",
     "Mrs_Obstacle"
 )
-
 seq = 0
+
+
+session = zenoh.open(zenoh.Config())
+key = 'vicon/objects'
+pub = session.declare_publisher(key)
+
+
 while True:
-
     client.GetFrame()
-
     timestamp = int(time.time() * 1e6)
     objects_data = []
 
@@ -80,7 +64,7 @@ while True:
         objects_data
     )
 
-    payload = packer.pack(msg)
-    send_msg(payload)
+    buf = f"{msg}"
+    pub.put(buf)
 
     seq += 1
