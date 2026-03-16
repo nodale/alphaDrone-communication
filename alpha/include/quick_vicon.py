@@ -64,9 +64,9 @@ class QuickVicon:
                 pos = np.array([x, y, z])
                 angle = np.array([qx, qy, qz], dtype=np.float64)
 
-                self.state[obj_id, 0:3] = pos
+                self.state[obj_id, 0:3] = pos - self.init_shared_state[0, 0:3]
                 self.state[obj_id, 3:6] = angle
 
-                self.shared_state[:] = self.state - self.init_shared_state
+            self.shared_state[:] = self.state
 
             return True

@@ -28,7 +28,7 @@ def main():
     shm_state_sp = shared_memory.SharedMemory(name="joeystick_state_setpoint")
 
     vic_state = np.ndarray((2,6), dtype=np.float64, buffer=shm_vic.buf)
-    vic_init_state = np.ndarray((6,), dtype=np.float64, buffer=shm_init_vic.buf)
+    vic_init_state = np.ndarray((2,6), dtype=np.float64, buffer=shm_init_vic.buf)
     state_sp = np.ndarray((4,), dtype=np.float64, buffer=shm_state_sp.buf)
 
     resource_tracker.unregister(shm_vic._name, "shared_memory")
@@ -54,9 +54,9 @@ def main():
             if keyboard.reboot_flag:
                 #mav.reboot() #disabled for now
                 keyboard.reboot_flag = False
-                vic_init_state[:3] = 0
-                time.sleep(0.1)
-                vic_init_state[:3] = vic_state[0][:3]  
+                vic_init_state[0][:3] = 0
+                time.sleep(0.2)
+                vic_init_state[0][:3] = vic_state[0][:3]  
 
             if keyboard.set_to_lift_flag:
                 mav.setTo_lift(current_t)

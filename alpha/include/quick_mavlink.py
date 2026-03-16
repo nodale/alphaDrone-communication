@@ -267,17 +267,27 @@ class QuickMav:
         self.sendPositionTarget(time, 0.0, 0.0, 0.0)
 
     def act_traverseSquare(self, time, current_pos):
-        target = self.square_points[self.square_progress]
 
-        dist = math.dist(current_pos, target)
+        start = np.array(self.square_points[self.square_progress])
+        end = np.array(self.square_points[(self.square_progress + 1) % 4])
+        pos = np.array(current_pos)
 
-        if dist < 0.03:
-            self.square_progress += 1
+        seg = end - start
+        seg_len_sq = np.dot(seg, seg)
 
-            if self.square_progress > 3:
-                self.square_progress = 0
+        if seg_len_sq < 1e-6:
+            return
 
-            target = self.square_points[self.square_progress]
+        t = np.dot(pos - start, seg) / seg_len_sq
+        t = np.clip(t, 0.0, 1.0)
+
+        lookahead = 0.05
+        t_target = min(1.0, t + lookahead)
+
+        target = start + seg * t_target
+
+        if t > 0.98:
+            self.square_progress = (self.square_progress + 1) % 4
 
         self.sendPositionYawTarget(time, target[0], target[1], target[2], 0.0)
 
