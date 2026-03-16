@@ -27,8 +27,8 @@ def main():
     shm_init_vic = shared_memory.SharedMemory(name="vicon_init_state")
     shm_state_sp = shared_memory.SharedMemory(name="joeystick_state_setpoint")
 
-    vic_state = np.ndarray((13,), dtype=np.float64, buffer=shm_vic.buf)
-    vic_init_state = np.ndarray((13,), dtype=np.float64, buffer=shm_init_vic.buf)
+    vic_state = np.ndarray((6,), dtype=np.float64, buffer=shm_vic.buf)
+    vic_init_state = np.ndarray((6,), dtype=np.float64, buffer=shm_init_vic.buf)
     state_sp = np.ndarray((4,), dtype=np.float64, buffer=shm_state_sp.buf)
 
     resource_tracker.unregister(shm_vic._name, "shared_memory")
@@ -80,9 +80,7 @@ def main():
             mav.sendOdometry(
                     current_t,
                     (vic_state[0], vic_state[1], vic_state[2]),
-                    (vic_state[6], vic_state[7], vic_state[8], vic_state[9]),
-                    (vic_state[3], vic_state[4], vic_state[5]),
-                    (vic_state[10], vic_state[11], vic_state[12])
+                    (vic_state[3], vic_state[4], vic_state[5])
                     )
 
             next_time += LOOP_PERIOD

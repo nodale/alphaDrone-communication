@@ -28,7 +28,7 @@ general_shared_sp = np.ndarray(general_sp.shape, dtype=general_sp.dtype, buffer=
 general_shared_sp[:] = general_sp
 
 shm_vic = shared_memory.SharedMemory(name="vicon_state")
-vic_state = np.ndarray((13,), dtype=np.float64, buffer=shm_vic.buf)
+vic_state = np.ndarray((6,), dtype=np.float64, buffer=shm_vic.buf)
 
 while True:
     try:

@@ -21,8 +21,8 @@ class QuickViser:
         self.shm_vic = shared_memory.SharedMemory(name="vicon_state")
         self.shm_state_sp = shared_memory.SharedMemory(name="general_setpoint")
         
-        self.est_state = np.ndarray((13,), dtype=np.float64, buffer=self.shm_est.buf)
-        self.vic_state = np.ndarray((2,13), dtype=np.float64, buffer=self.shm_vic.buf)
+        self.est_state = np.ndarray((6,), dtype=np.float64, buffer=self.shm_est.buf)
+        self.vic_state = np.ndarray((2,6), dtype=np.float64, buffer=self.shm_vic.buf)
         self.state_sp = np.ndarray((3,), dtype=np.float64, buffer=self.shm_state_sp.buf)
 
         #cross offset setup
@@ -168,16 +168,11 @@ class QuickViser:
         if state_sp is not None:
             self.sp_point_cloud_handle.points = state_sp
 
-    def update_velocity_lines(self, state_est, state_vic):
+    def update_velocity_lines(self, state_est):
         if state_est is not None:
             self.vel_line_est[0, 0] = [state_est[0], state_est[1], state_est[2]]   
             self.vel_line_est[0, 1] = [state_est[0] + state_est[3]*1, state_est[1] + state_est[4]*1, state_est[2] + state_est[5]*1]
             self.vel_handle_est.points = self.vel_line_est
-
-        if state_vic is not None:
-            self.vel_line_vic[0, 0] = [state_vic[0], state_vic[1], state_vic[2]]   
-            self.vel_line_vic[0, 1] = [state_vic[0] + state_vic[3]*1, state_vic[1] + state_vic[4]*1, state_vic[2] + state_vic[5]*1]
-            self.vel_handle_vic.points = self.vel_line_vic
         
     def _rpy_to_rot(self, roll, pitch, yaw):
         cr, sr = np.cos(roll), np.sin(roll)
@@ -280,7 +275,7 @@ class QuickViser:
 
         if state_vic is not None:
             pos = np.array(state_vic[0:3], dtype=np.float32)
-            heading = self._heading_dir(state_vic[6], state_vic[7], state_vic[8])
+            heading = self._heading_dir(state_vic[3], state_vic[4], state_vic[5])
 
             self.heading_line_vic[0, 0] = pos
             self.heading_line_vic[0, 1] = pos + heading * scale

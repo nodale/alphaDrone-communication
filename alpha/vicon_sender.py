@@ -57,21 +57,16 @@ while True:
     for obj_id, name in enumerate(object_name):
 
         (x_mm, y_mm, z_mm) = client.GetSegmentGlobalTranslation(name, name)[0]
-        q_raw, _ = client.GetSegmentGlobalRotationQuaternion(name, name)
+        (wx, wy, wz), _ = client.GetSegmentGlobalRotationEulerXYZ(name, name)
 
         x = x_mm * 0.001
         y = y_mm * 0.001
         z = z_mm * 0.001
 
-        qw = q_raw[3]
-        qx = q_raw[0]
-        qy = q_raw[1]
-        qz = q_raw[2]
-
         objects_data.append([
             obj_id,
             x, y, z,
-            qw, qx, qy, qz
+            wx, wy, wz
         ])
 
     msg = (

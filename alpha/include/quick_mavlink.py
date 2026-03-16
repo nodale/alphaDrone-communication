@@ -35,7 +35,7 @@ class QuickMav:
         self.eight_progress = 0.0
 
         if create==True:
-            self.state = np.array([0.0]*13, dtype=np.float64)
+            self.state = np.array([0.0]*6, dtype=np.float64)
             self.shm = shared_memory.SharedMemory(name="estimated_state", create=True, size=self.state.nbytes)
             self.shared_state = np.ndarray(self.state.shape, dtype=self.state.dtype, buffer=self.shm.buf)
 
@@ -191,22 +191,13 @@ class QuickMav:
             wx, wy, wz
         ]
 
-    def sendOdometry(self, time, pos, q, vel, rotRates, cov1=[0.002]*21, cov2=[0.002]*21):
-        vodom = mavlink2.MAVLink_odometry_message(
+    def sendOdometry(self, time, pos, angle, cov1=[0.002]*21):
+        self.master.mav.vicon_position_estimate_send(
                 time,
-                mavutil.mavlink.MAV_FRAME_LOCAL_FRD,
-                mavutil.mavlink.MAV_FRAME_LOCAL_FRD,
                 pos[0], pos[1], pos[2],
-                [q[0], q[1], q[2], q[3]],
-                vel[0], vel[1], vel[2],
-                rotRates[0], rotRates[1], rotRates[2],
-                cov1, 
-                cov2,
-                0,
-                0,
-                100
+                angle[0], angle[1], angle[2], 
+                cov1
                 )
-        self.master.mav.send(vodom)
 
     def refeed(self):
         _translation = self.get('LOCAL_POSITION_NED', True)
