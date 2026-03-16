@@ -15,12 +15,11 @@ class QuickVicon:
     def __init__(self, address, port, block):
         self.address, self.port, self.block = address, port, block
 
-    #def __post_init__(self):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind((self.address, self.port))
         self.sock.setblocking(self.block)
 
-        # [x,y,z,vx,vy,vz,qw,qx,qy,qz,wx,wy,wz]
+        # [x,y,z,wx,wy,wz]
         self.state = np.zeros((self.num_objects, 6), dtype=np.float64)
 
         shm_size = self.state.nbytes
@@ -33,15 +32,15 @@ class QuickVicon:
 
     def get_data(self):
         try:
-           payload, addr = self.sock.recvfrom(4096)
-           msg = msgpack.unpackb(payload, raw=False)
+            payload, addr = self.sock.recvfrom(512)
+            msg = msgpack.unpackb(payload, raw=False)
 
-           # (seq, timestamp, [[id,x,y,z,qx,qy,qz], ...])
-           seq = msg[0]
-           timestamp = msg[1]
-           objects = msg[2]
+            # (seq, timestamp, [[id,x,y,z,qx,qy,qz], ...])
+            seq = msg[0]
+            timestamp = msg[1]
+            objects = msg[2]
 
-           return timestamp, objects
+            return timestamp, objects
 
         except BlockingIOError:
             return None, None
@@ -52,6 +51,7 @@ class QuickVicon:
 
     def update_state(self):
         timestamp, objects = self.get_data()
+        print(objects)
 
         if objects is None:
             return False
@@ -64,7 +64,6 @@ class QuickVicon:
 
                 pos = np.array([x, y, z])
                 angle = np.array([qx, qy, qz], dtype=np.float64)
-
 
                 self.state[obj_id, 0:3] = pos
                 self.state[obj_id, 3:6] = angle

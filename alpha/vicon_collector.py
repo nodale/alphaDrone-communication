@@ -6,9 +6,9 @@ from include.quick_vicon import QuickVicon
 
 def main():
     vicon = QuickVicon(
-        address="10.183.217.138",
+        address='10.183.217.138',
         port=8020,
-        block=True
+        block=False
     )
 
     while True:
@@ -19,7 +19,7 @@ def main():
 
         except Exception as e:        
             print("Error in main loop:", e)
-            vicon.sock.close()
+            #vicon.sock.close()
             vicon.shm.close()
             vicon.shm.unlink()
             vicon.init_shm.close()
