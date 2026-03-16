@@ -23,15 +23,15 @@ class QuickMav:
         super().__init__(**kwargs)
 
         self.square_points = (
-                (0.4, 0.4, -0.18),
-                (0.4, -0.4, -0.18),
-                (-0.4, -0.4, -0.18),
-                (-0.4, 0.4, -0.18),
-                (0.0, 0.0, -0.18),
+                (0.4, 0.4, -0.3),
+                (0.4, -0.4, -0.3),
+                (-0.4, -0.4, -0.3),
+                (-0.4, 0.4, -0.3),
+                (0.0, 0.0, -0.3),
                 )
         self.square_progress = 0
 
-        self.eight_points = (0.0, 0.0, -0.18)
+        self.eight_points = (0.0, 0.0, -0.3)
         self.eight_progress = 0.0
 
         if create==True:
@@ -281,19 +281,19 @@ class QuickMav:
         t = np.dot(pos - start, seg) / seg_len_sq
         t = np.clip(t, 0.0, 1.0)
 
-        lookahead = 0.05
+        lookahead = 0.24
         t_target = min(1.0, t + lookahead)
 
         target = start + seg * t_target
 
-        if t > 0.98:
+        if t > 0.9:
             self.square_progress = (self.square_progress + 1) % 4
 
         self.sendPositionYawTarget(time, target[0], target[1], target[2], 0.0)
 
     def act_traverseEight(self, time, current_pos):
-        x_oscl = 0.5
-        y_oscl = 0.5
+        x_oscl = 0.7
+        y_oscl = 0.7
         omega = 0.04
 
         dist = math.dist(current_pos, self.eight_points)
