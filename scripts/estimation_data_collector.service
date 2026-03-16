@@ -1,7 +1,7 @@
 
 [Unit]
 Description=Collects data from PixHawk
-After=network.target
+After=setpoint_data_collector.service
 
 [Service]
 Type=simple

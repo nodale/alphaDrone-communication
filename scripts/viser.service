@@ -1,7 +1,7 @@
 
 [Unit]
 Description=showing things on viser
-After=network.target
+After=estimation-data_collector.service
 
 [Service]
 Type=simple

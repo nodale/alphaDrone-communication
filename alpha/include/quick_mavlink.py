@@ -191,8 +191,8 @@ class QuickMav:
             wx, wy, wz
         ]
 
-    def sendOdometry(self, time, pos, angle, cov1=[0.002]*21):
-        self.master.mav.vicon_position_estimate_send(
+    def sendOdometry(self, time, pos, angle, cov1=[0.001]*21):
+        self.master.mav.vision_position_estimate_send(
                 time,
                 pos[0], pos[1], pos[2],
                 angle[0], angle[1], angle[2], 
