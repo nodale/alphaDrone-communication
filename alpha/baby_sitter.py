@@ -49,17 +49,16 @@ def main():
             _state_box = vis.vic_state[1:].copy()
 
             state_est = reform(_state_est)
-            state_vic = reform(_state_vic)
 
-            vis.update_point_clouds(state_est, state_vic, _state_sp)
-            vis.update_velocity_lines(state_est, state_vic)
-            vis.update_x(state_est, state_vic)
-            vis.update_heading(state_est, state_vic)
+            vis.update_point_clouds(state_est, _state_vic, _state_sp)
+            vis.update_velocity_lines(state_est)
+            vis.update_x(state_est, _state_vic)
+            vis.update_heading(state_est, _state_vic)
             vis.update_obstacles(_state_box)
 
             status_msg = (
-                f"vic_position: {state_vic[0]}, {state_vic[1]}, {state_vic[2]}\n"
-                f"vic_rotation: {state_vic[6]}, {state_vic[7]}, {state_vic[8]}\n"
+                f"vic_position: {_state_vic[0]}, {_state_vic[1]}, {_state_vic[2]}\n"
+                f"vic_rotation: {_state_vic[3]}, {_state_vic[4]}, {_state_vic[5]}\n"
                 f"est_position: {state_est[0]}, {state_est[1]}, {state_est[2]}\n"
                 f"est_rotation: {state_est[6]}, {state_est[7]}, {state_est[8]}\n"
             )

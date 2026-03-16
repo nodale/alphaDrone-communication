@@ -21,7 +21,7 @@ class QuickViser:
         self.shm_vic = shared_memory.SharedMemory(name="vicon_state")
         self.shm_state_sp = shared_memory.SharedMemory(name="general_setpoint")
         
-        self.est_state = np.ndarray((6,), dtype=np.float64, buffer=self.shm_est.buf)
+        self.est_state = np.ndarray((13,), dtype=np.float64, buffer=self.shm_est.buf)
         self.vic_state = np.ndarray((2,6), dtype=np.float64, buffer=self.shm_vic.buf)
         self.state_sp = np.ndarray((3,), dtype=np.float64, buffer=self.shm_state_sp.buf)
 
@@ -210,8 +210,9 @@ class QuickViser:
 
         if state_vic is not None:
             center = [state_vic[0], state_vic[1], state_vic[2]]
+            temp_state = (state_vic[0], state_vic[1], state_vic[2], 0.0, 0.0, 0.0, state_vic[3], state_vic[4], state_vic[5], 0.0, 0.0, 0.0)
 
-            self.vic_x_world = self._transform_points(state_vic)
+            self.vic_x_world = self._transform_points(temp_state)
             x_lines_vic = self._gen_x(self.vic_x_world)
             self.x_handle_vic.points = x_lines_vic
 
@@ -295,14 +296,15 @@ class QuickViser:
                 # update existing box
                 handle = self.obstacle_boxes[name]
                 handle.position = box[0:3]
-                handle.wxyz = box[6:10]
             else:
                 # add new box
                 handle = self.server.scene.add_box(
                     name=name,
+                    cast_shadow=False,
+                    receive_shadow=False,
                     dimensions=(0.2, 0.2, 0.2),
                     position=box[0:3],
-                    wxyz=box[6:10],
+                    wxyz=(1.0,0.0,0.0,0.0),
                     color=(5, 5, 5)
                 )
                 self.obstacle_boxes[name] = handle

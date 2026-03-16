@@ -31,11 +31,11 @@ class QuickMav:
                 )
         self.square_progress = 0
 
-        self.eight_points = (0.0, 0.0, 0.0)
+        self.eight_points = (0.0, 0.0, -0.18)
         self.eight_progress = 0.0
 
         if create==True:
-            self.state = np.array([0.0]*6, dtype=np.float64)
+            self.state = np.array([0.0]*13, dtype=np.float64)
             self.shm = shared_memory.SharedMemory(name="estimated_state", create=True, size=self.state.nbytes)
             self.shared_state = np.ndarray(self.state.shape, dtype=self.state.dtype, buffer=self.shm.buf)
 
@@ -271,7 +271,7 @@ class QuickMav:
 
         dist = math.dist(current_pos, target)
 
-        if dist < 0.01:
+        if dist < 0.03:
             self.square_progress += 1
 
             if self.square_progress > 3:
@@ -288,7 +288,7 @@ class QuickMav:
 
         dist = math.dist(current_pos, self.eight_points)
 
-        if dist < 0.01:
+        if dist < 0.03:
             self.eight_progress += 1
             self.eight_points = (
                 x_oscl * math.sin(omega * self.eight_progress),

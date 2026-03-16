@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import datetime
 
 import numpy as np
 import threading
@@ -23,7 +24,9 @@ class QuickKeyboard:
     traverse_eight_flag : bool = False
     manual_setpoint_flag : bool = False
 
-    def __init__(self, file="LOG.h5"):
+    def __init__(self, file="past_logs/LOG.h5"):
+        prefix = datetime.now().strftime("%Y%m%d_%H%M%S")
+        file=f"past_logs/{prefix}_LOG.h5"
         self.writer = h5py.File(file, "w")
 
         self.est_ds = self.writer.create_dataset(
@@ -37,8 +40,17 @@ class QuickKeyboard:
 
         self.vic_ds = self.writer.create_dataset(
             "vicon",
-            shape=(0, 14),
-            maxshape=(None, 14),
+            shape=(0, 6),
+            maxshape=(None, 6),
+            dtype=np.float32,
+            chunks=True
+        )
+        self.vic_idx = 0
+
+        self.obstacle_ds = self.writer.create_dataset(
+            "obstacle",
+            shape=(0, 4),
+            maxshape=(None, 4),
             dtype=np.float32,
             chunks=True
         )

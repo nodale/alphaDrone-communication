@@ -27,7 +27,7 @@ def main():
     shm_init_vic = shared_memory.SharedMemory(name="vicon_init_state")
     shm_state_sp = shared_memory.SharedMemory(name="joeystick_state_setpoint")
 
-    vic_state = np.ndarray((6,), dtype=np.float64, buffer=shm_vic.buf)
+    vic_state = np.ndarray((2,6), dtype=np.float64, buffer=shm_vic.buf)
     vic_init_state = np.ndarray((6,), dtype=np.float64, buffer=shm_init_vic.buf)
     state_sp = np.ndarray((4,), dtype=np.float64, buffer=shm_state_sp.buf)
 
@@ -56,7 +56,7 @@ def main():
                 keyboard.reboot_flag = False
                 vic_init_state[:3] = 0
                 time.sleep(0.1)
-                vic_init_state[:3] = vic_state[:3]  
+                vic_init_state[:3] = vic_state[0][:3]  
 
             if keyboard.set_to_lift_flag:
                 mav.setTo_lift(current_t)
@@ -69,18 +69,18 @@ def main():
                 keyboard.set_to_active_flag = False
 
             if keyboard.traverse_square_flag:
-                mav.act_traverseSquare(current_t, (vic_state[0], vic_state[1], vic_state[2]))
+                mav.act_traverseSquare(current_t, (vic_state[0][0], vic_state[0][1], vic_state[0][2]))
 
             if keyboard.traverse_eight_flag:
-                mav.act_traverseEight(current_t, (vic_state[0], vic_state[1], vic_state[2]))
+                mav.act_traverseEight(current_t, (vic_state[0][0], vic_state[0][1], vic_state[0][2]))
 
             if keyboard.manual_setpoint_flag:
                 mav.sendPositionYawTarget(current_t, state_sp[0], state_sp[1], state_sp[2], state_sp[3])
 
             mav.sendOdometry(
                     current_t,
-                    (vic_state[0], vic_state[1], vic_state[2]),
-                    (vic_state[3], vic_state[4], vic_state[5])
+                    (vic_state[0][0], vic_state[0][1], vic_state[0][2]),
+                    (vic_state[0][3], vic_state[0][4], vic_state[0][5])
                     )
 
             next_time += LOOP_PERIOD

@@ -32,7 +32,7 @@ class QuickVicon:
 
     def get_data(self):
         try:
-            payload, addr = self.sock.recvfrom(512)
+            payload, addr = self.sock.recvfrom(2048)
             msg = msgpack.unpackb(payload, raw=False)
 
             # (seq, timestamp, [[id,x,y,z,qx,qy,qz], ...])
@@ -51,7 +51,6 @@ class QuickVicon:
 
     def update_state(self):
         timestamp, objects = self.get_data()
-        print(objects)
 
         if objects is None:
             return False
