@@ -41,10 +41,10 @@ client.SetAxisMapping(
 
 client.GetFrame()
 
-object_name = (
+object_name = [
     "Mr_Obstacle",
     "Mrs_Obstacle"
-)
+    ]
 
 seq = 0
 while True:
