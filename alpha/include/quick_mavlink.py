@@ -39,6 +39,10 @@ class QuickMav:
             self.shm = shared_memory.SharedMemory(name="estimated_state", create=True, size=self.state.nbytes)
             self.shared_state = np.ndarray(self.state.shape, dtype=self.state.dtype, buffer=self.shm.buf)
 
+            self.actuation = np.array([0.0]*4, dtype=np.float64)
+            self.shm_actuation = shared_memory.SharedMemory(name="actuation", create=True, size=self.actuation.nbytes)
+            self.shared_actuation = np.ndarray(self.actuation.shape, dtype=self.actuation.dtype, buffer=self.shm_actuation.buf)
+
         self.shm_general_sp = shared_memory.SharedMemory(name="general_setpoint")
         self.general_sp = np.ndarray((3,), dtype=np.float64, buffer=self.shm_general_sp.buf)
 
@@ -168,8 +172,8 @@ class QuickMav:
         return self.est_odo
 
     def getJohnny(self, block=False):
-        johnny = self.get("JOHNNY_STATUS", block=block)
-        return johnny
+        self.johnny = self.get("JOHNNY_STATUS", block=block)
+        return self.johnny
 
     def getSetpoint(self, block=False):
         sp = self.get("POSITION_TARGET_LOCAL_NED", block=block)
@@ -190,6 +194,11 @@ class QuickMav:
             qw, qx, qy, qz,
             wx, wy, wz
         ]
+
+    def publish_actuation(self, name):
+        actuation = self.johnny.u
+        
+        self.shared_actuation[:] = actuation
 
     def sendOdometry(self, time, pos, angle, cov1=[0.001]*21):
         self.master.mav.vision_position_estimate_send(

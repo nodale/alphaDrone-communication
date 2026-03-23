@@ -26,18 +26,27 @@ def main():
     shm_vic = shared_memory.SharedMemory(name="vicon_state")
     shm_init_vic = shared_memory.SharedMemory(name="vicon_init_state")
     shm_state_sp = shared_memory.SharedMemory(name="joeystick_state_setpoint")
+    shm_actuation = shared_memory.SharedMemory(name="actuation")
 
     vic_state = np.ndarray((2,6), dtype=np.float64, buffer=shm_vic.buf)
     vic_init_state = np.ndarray((2,6), dtype=np.float64, buffer=shm_init_vic.buf)
     state_sp = np.ndarray((4,), dtype=np.float64, buffer=shm_state_sp.buf)
+    actuation = np.ndarray((4,), dtype=np.float64, buffer=shm_actuation.buf)
 
     resource_tracker.unregister(shm_vic._name, "shared_memory")
     resource_tracker.unregister(shm_init_vic._name, "shared_memory")
     resource_tracker.unregister(shm_state_sp._name, "shared_memory")
+    resource_tracker.unregister(shm_actuation._name, "shared_memory")
 
     try:
         while not keyboard.quit_flag:
             current_t = int(time.time() * 1e6) & 0xFFFFFFFF
+
+            if not keyboard.pause_flag:
+                keyboard.log_vicon(vic_state[0])
+                keyboard.log_obstacle(vic_state[1])
+                keyboard.log_setpoint(state_sp)
+                keyboard.log_actuation(actuation)
 
             if keyboard.arm_flag:
                 mav.arm()

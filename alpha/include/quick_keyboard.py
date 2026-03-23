@@ -49,12 +49,30 @@ class QuickKeyboard:
 
         self.obstacle_ds = self.writer.create_dataset(
             "obstacle",
+            shape=(0, 3),
+            maxshape=(None, 3),
+            dtype=np.float32,
+            chunks=True
+        )
+        self.obs_idx = 0
+
+        self.actuation_ds = self.writer.create_dataset(
+            "actuation",
             shape=(0, 4),
             maxshape=(None, 4),
             dtype=np.float32,
             chunks=True
         )
-        self.vic_idx = 0
+        self.actuation_idx = 0
+
+        self.setpoint_ds = self.writer.create_dataset(
+            "setpoint",
+            shape=(0, 4),
+            maxshape=(None, 4),
+            dtype=np.float32,
+            chunks=True
+        )
+        self.setpoint_idx = 0
 
         self.init_time = time.time()
 
@@ -138,6 +156,35 @@ class QuickKeyboard:
                     self.traverse_eight_flag = False
                     self.manual_setpoint_flag = True
                     print("USING MANUAL SETPOINT")
+    
+    def log_estimated(self, est):
+        t = time.time() - self.init_time
+        row = np.concatenate(([t], est))
+        self._append(self.est_ds, "est_idx", row.astype(np.float32))
+
+
+    def log_vicon(self, vic):
+        t = time.time() - self.init_time
+        row = np.concatenate(([t], vic)) 
+        self._append(self.vic_ds, "vic_idx", row.astype(np.float32))
+
+
+    def log_obstacle(self, obs):
+        t = time.time() - self.init_time
+        row = np.concatenate(([t], obs))
+        self._append(self.obstacle_ds, "obs_idx", row.astype(np.float32))
+
+
+    def log_actuation(self, act):
+        t = time.time() - self.init_time
+        row = np.concatenate(([t], act))
+        self._append(self.actuation_ds, "actuation_idx", row.astype(np.float32))
+
+
+    def log_setpoint(self, sp):
+        t = time.time() - self.init_time
+        row = np.concatenate(([t], sp))
+        self._append(self.setpoint_ds, "setpoint_idx", row.astype(np.float32))
 
     def start(self):
         threading.Thread(target=self._keyboard_listener, daemon=True).start()

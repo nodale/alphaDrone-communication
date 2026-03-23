@@ -16,11 +16,14 @@ def main():
 
     while True:
         try:
-            msg = mav.master.recv_match(type="ODOMETRY", blocking=False)
+            msg_odo = mav.getOdometry()
+            msg_act = mav.getJohnny()
 
-            if msg is not None:
-                mav.est_odo = msg
+            if msg_odo is not None:
                 mav.publish_odometry("estimated_state")
+
+            if msg_act is not None:
+                mav.publish_actuation("estimated_state")
 
             #print("states : ", mav.shared_state.copy())
 
