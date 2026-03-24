@@ -3,7 +3,7 @@ import socket
 import time
 import struct
 
-UDP_IP = "10.183.217.138"
+UDP_IP = "192.168.1.10"
 UDP_PORT = 8001
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)

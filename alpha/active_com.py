@@ -51,10 +51,13 @@ def main():
             current_t = int(time.time() * 1e6) & 0xFFFFFFFF
 
             if not keyboard.pause_flag:
-                keyboard.log_vicon(vic_state[0])
+                data = np.hstack(([current_t], vic_state[0].flatten()))
+                keyboard.log_vicon(data)
                 keyboard.log_obstacle(vic_state[1])
                 keyboard.log_setpoint(state_sp)
                 keyboard.log_actuation(actuation)
+
+                keyboard.writer.flush()
 
             if keyboard.arm_flag:
                 mav.arm()

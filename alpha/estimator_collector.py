@@ -23,7 +23,8 @@ def main():
                 mav.publish_odometry("estimated_state")
 
             if msg_act is not None:
-                mav.publish_actuation("estimated_state")
+                print(msg_act)
+                #mav.publish_actuation("actuation")
 
             #print("states : ", mav.shared_state.copy())
 

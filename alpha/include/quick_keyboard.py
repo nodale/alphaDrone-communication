@@ -40,8 +40,8 @@ class QuickKeyboard:
 
         self.vic_ds = self.writer.create_dataset(
             "vicon",
-            shape=(0, 6),
-            maxshape=(None, 6),
+            shape=(0, 7), #t, x, y, z, roll, pitch, yaw
+            maxshape=(None, 7),
             dtype=np.float32,
             chunks=True
         )
@@ -49,8 +49,8 @@ class QuickKeyboard:
 
         self.obstacle_ds = self.writer.create_dataset(
             "obstacle",
-            shape=(0, 3),
-            maxshape=(None, 3),
+            shape=(0, 6),
+            maxshape=(None, 6),
             dtype=np.float32,
             chunks=True
         )
@@ -156,36 +156,31 @@ class QuickKeyboard:
                     self.traverse_eight_flag = False
                     self.manual_setpoint_flag = True
                     print("USING MANUAL SETPOINT")
-    
-    def log_estimated(self, est):
-        t = time.time() - self.init_time
-        row = np.concatenate(([t], est))
-        self._append(self.est_ds, "est_idx", row.astype(np.float32))
-
-
-    def log_vicon(self, vic):
-        t = time.time() - self.init_time
-        row = np.concatenate(([t], vic)) 
-        self._append(self.vic_ds, "vic_idx", row.astype(np.float32))
-
-
-    def log_obstacle(self, obs):
-        t = time.time() - self.init_time
-        row = np.concatenate(([t], obs))
-        self._append(self.obstacle_ds, "obs_idx", row.astype(np.float32))
-
-
-    def log_actuation(self, act):
-        t = time.time() - self.init_time
-        row = np.concatenate(([t], act))
-        self._append(self.actuation_ds, "actuation_idx", row.astype(np.float32))
-
-
-    def log_setpoint(self, sp):
-        t = time.time() - self.init_time
-        row = np.concatenate(([t], sp))
-        self._append(self.setpoint_ds, "setpoint_idx", row.astype(np.float32))
 
     def start(self):
         threading.Thread(target=self._keyboard_listener, daemon=True).start()
 
+    def log_estimated(self, data):
+        self.est_ds.resize((self.est_idx + 1, 14))
+        self.est_ds[self.est_idx] = data
+        self.est_idx += 1
+
+    def log_vicon(self, data):
+        self.vic_ds.resize((self.vic_idx + 1, 7))
+        self.vic_ds[self.vic_idx] = data
+        self.vic_idx += 1
+
+    def log_obstacle(self, data):
+        self.obstacle_ds.resize((self.obs_idx + 1, 6))
+        self.obstacle_ds[self.obs_idx] = data
+        self.obs_idx += 1
+
+    def log_actuation(self, data):
+        self.actuation_ds.resize((self.actuation_idx + 1, 4))
+        self.actuation_ds[self.actuation_idx] = data
+        self.actuation_idx += 1
+
+    def log_setpoint(self, data):
+        self.setpoint_ds.resize((self.setpoint_idx + 1, 4))
+        self.setpoint_ds[self.setpoint_idx] = data
+        self.setpoint_idx += 1

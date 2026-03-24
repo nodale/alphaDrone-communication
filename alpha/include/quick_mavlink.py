@@ -47,8 +47,9 @@ class QuickMav:
             self.shm_general_sp = shared_memory.SharedMemory(name="general_setpoint")
             self.general_sp = np.ndarray((3,), dtype=np.float64, buffer=self.shm_general_sp.buf)
         except FileNotFoundError:
-            self.general_sp = np.array([0.0]*3, dtype=np.float64)
-
+            self.sp = np.array([0.0]*3, dtype=np.float64)
+            self.shm_general_sp = shared_memory.SharedMemory(name="general_setpoint", create=True, size=self.sp.nbytes)
+            self.general_sp = np.ndarray((3,), dtype=np.float64, buffer=self.shm_general_sp.buf)
 
     def __del__(self):
         self.master.close()
@@ -75,15 +76,15 @@ class QuickMav:
         except:
             print("sending heartbeat failed :(")
 
-        #self.master.mav.command_long_send(
-        #        self.master.target_system,
-        #        self.master.target_component,
-        #        mavutil.mavlink.MAV_CMD_SET_MESSAGE_INTERVAL,  
-        #        0,                                             
-        #        44001,  #this is for johnny_status                          
-        #        2,                                   
-        #        0, 0, 0, 0, 0                                  
-        #        )
+        self.master.mav.command_long_send(
+                self.master.target_system,
+                self.master.target_component,
+                mavutil.mavlink.MAV_CMD_SET_MESSAGE_INTERVAL,  
+                0,                                             
+                44001,  #this is for johnny_status                          
+                200,                                   
+                0, 0, 0, 0, 0                                  
+                )
 
         self.master.mav.command_long_send(
                 self.master.target_system,
@@ -91,7 +92,7 @@ class QuickMav:
                 mavutil.mavlink.MAV_CMD_SET_MESSAGE_INTERVAL,  
                 0,                                             
                 331,    #odometry
-                100,    #this is the udpate frwq, apparently putting it to a lowervalue breaks it                               
+                200,    #this is the udpate frwq, apparently putting it to a lowervalue breaks it                               
                 0, 0, 0, 0, 0                                  
                 )
 
@@ -200,7 +201,7 @@ class QuickMav:
         ]
 
     def publish_actuation(self, name):
-        actuation = self.johnny.u
+        actuation = self.johnny.actuation
         
         self.shared_actuation[:] = actuation
 

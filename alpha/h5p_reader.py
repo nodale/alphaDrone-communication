@@ -8,7 +8,7 @@ from viser.transforms import SO3
 # =========================
 # Load HDF5 data
 # =========================
-FILENAME = "past_logs/flight_log-26_02_2026.h5"
+FILENAME = "past_logs/20260324_140012_LOG.h5"
 
 with h5py.File(FILENAME, "r") as f:
     print("Keys:", list(f.keys()))
@@ -16,14 +16,36 @@ with h5py.File(FILENAME, "r") as f:
         print(k, f[k].shape)
 
 with h5py.File(FILENAME, "r") as f:
-    est = f["vicon"][:]  # (N, 11)
+    vic = f["vicon"][:]  # shape (N, 7): time, x, y, z, roll, pitch, yaw
 
-N = est.shape[0]
+# =========================
+# Extract data
+# =========================
+t_est = vic[:, 0]
+t_est = t_est - t_est[0]          # normalize time
+pos_est = vic[:, 1:4]             # x, y, z
+rpy_est = vic[:, 4:7]             # roll, pitch, yaw in radians
 
-t_est = est[:, 0]
-t_est = t_est - t_est[0]        # normalize time
-pos_est = est[:, 1:4]
-quat_est = est[:, 7:11]         # qx qy qz qw
+N = vic.shape[0]
+
+# Convert roll-pitch-yaw to quaternions for viser
+def rpy_to_quat(rpy):
+    roll, pitch, yaw = rpy
+    # Following aerospace convention: ZYX
+    cy = np.cos(yaw * 0.5)
+    sy = np.sin(yaw * 0.5)
+    cp = np.cos(pitch * 0.5)
+    sp = np.sin(pitch * 0.5)
+    cr = np.cos(roll * 0.5)
+    sr = np.sin(roll * 0.5)
+
+    qw = cr * cp * cy + sr * sp * sy
+    qx = sr * cp * cy - cr * sp * sy
+    qy = cr * sp * cy + sr * cp * sy
+    qz = cr * cp * sy - sr * sp * cy
+    return np.array([qw, qx, qy, qz])
+
+quat_est = np.array([rpy_to_quat(rpy_est[i]) for i in range(N)])
 
 # =========================
 # Start viser server
@@ -129,7 +151,7 @@ def playback_loop():
             time_slider.value = float(t_est[idx])
 
             p = pos_est[idx]
-            qx, qy, qz, qw = quat_est[idx]
+            qw, qx, qy, qz = quat_est[idx]
 
             body.position = p
             body.orientation = SO3.from_quaternion(
