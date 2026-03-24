@@ -5,9 +5,6 @@ import numpy as np
 import viser
 from viser.transforms import SO3
 
-# =========================
-# Load HDF5 data
-# =========================
 FILENAME = "past_logs/20260324_140012_LOG.h5"
 
 with h5py.File(FILENAME, "r") as f:
@@ -18,20 +15,15 @@ with h5py.File(FILENAME, "r") as f:
 with h5py.File(FILENAME, "r") as f:
     vic = f["vicon"][:]  # shape (N, 7): time, x, y, z, roll, pitch, yaw
 
-# =========================
-# Extract data
-# =========================
 t_est = vic[:, 0]
-t_est = t_est - t_est[0]          # normalize time
-pos_est = vic[:, 1:4]             # x, y, z
-rpy_est = vic[:, 4:7]             # roll, pitch, yaw in radians
+t_est = t_est - t_est[0]
+pos_est = vic[:, 1:4]  
+rpy_est = vic[:, 4:7] 
 
 N = vic.shape[0]
 
-# Convert roll-pitch-yaw to quaternions for viser
 def rpy_to_quat(rpy):
     roll, pitch, yaw = rpy
-    # Following aerospace convention: ZYX
     cy = np.cos(yaw * 0.5)
     sy = np.sin(yaw * 0.5)
     cp = np.cos(pitch * 0.5)
@@ -47,14 +39,12 @@ def rpy_to_quat(rpy):
 
 quat_est = np.array([rpy_to_quat(rpy_est[i]) for i in range(N)])
 
-# =========================
-# Start viser server
-# =========================
 server = viser.ViserServer()
+server.scene.add_grid(name="xy", plane="xy", width=10, height=10, cell_size=1.0)
+server.scene.add_grid(name="xz", plane="xz", width=10, height=10, cell_size=1.0)
+server.scene.add_grid(name="yz", plane="yz", width=10, height=10, cell_size=1.0)
+server.scene.set_up_direction("-z")
 
-# =========================
-# Scene objects
-# =========================
 traj_points = server.scene.add_point_cloud(
     name="trajectory",
     points=pos_est,
@@ -68,13 +58,10 @@ body = server.scene.add_frame(
     axes_radius=0.02,
 )
 
-# =========================
-# GUI controls
-# =========================
 with server.gui.add_folder("Playback"):
-    btn_start = server.gui.add_button("▶ Start")
-    btn_pause = server.gui.add_button("⏸ Pause")
-    btn_replay = server.gui.add_button("⟲ Replay")
+    btn_start = server.gui.add_button("Start")
+    btn_pause = server.gui.add_button("Pause")
+    btn_replay = server.gui.add_button(" Replay")
 
     time_slider = server.gui.add_slider(
         "Time (s)",
@@ -84,16 +71,10 @@ with server.gui.add_folder("Playback"):
         initial_value=0.0,
     )
 
-# =========================
-# Playback state
-# =========================
 playing = False
 idx = 0
 lock = threading.Lock()
 
-# =========================
-# GUI callbacks
-# =========================
 @btn_start.on_click
 def _start(_):
     global playing
@@ -115,14 +96,21 @@ def _replay(_):
 @time_slider.on_update
 def _slider_update(event):
     global idx, playing
-    playing = False  # pause while scrubbing
+    playing = False
+
     with lock:
-        idx = np.searchsorted(t_est, event.value)
+        new_t = time_slider.value
+
+        idx = np.searchsorted(t_est, new_t)
         idx = int(np.clip(idx, 0, N - 1))
 
-# =========================
-# Playback loop
-# =========================
+        p = pos_est[idx]
+        qw, qx, qy, qz = quat_est[idx]
+        body.position = p
+        body.orientation = SO3(wxyz=np.array([qw, qx, qy, qz]))
+        traj_points.points = pos_est[: idx + 1]
+        traj_points.colors = np.tile([0.2, 0.6, 1.0], (idx + 1, 1))
+
 def playback_loop():
     global idx, playing
     last_wall_time = time.time()
@@ -130,11 +118,11 @@ def playback_loop():
     while True:
         time.sleep(0.005)
 
-        if not playing:
+        if playing is False:
             last_wall_time = time.time()
             continue
 
-        with lock:
+        if playing is True:
             if idx >= N - 1:
                 playing = False
                 continue
@@ -152,14 +140,11 @@ def playback_loop():
 
             p = pos_est[idx]
             qw, qx, qy, qz = quat_est[idx]
-
             body.position = p
-            body.orientation = SO3.from_quaternion(
-                np.array([qw, qx, qy, qz])
-            )
+            body.orientation = SO3.from_quaternion(np.array([qw, qx, qy, qz]))
 
-# =========================
-# Start playback thread
-# =========================
+            traj_points.points = pos_est[:idx + 1]
+            traj_points.colors = np.tile([0.2, 0.6, 1.0], (idx + 1, 1))
+
 threading.Thread(target=playback_loop, daemon=True).start()
 threading.Event().wait()
