@@ -43,8 +43,12 @@ class QuickMav:
             self.shm_actuation = shared_memory.SharedMemory(name="actuation", create=True, size=self.actuation.nbytes)
             self.shared_actuation = np.ndarray(self.actuation.shape, dtype=self.actuation.dtype, buffer=self.shm_actuation.buf)
 
-        self.shm_general_sp = shared_memory.SharedMemory(name="general_setpoint")
-        self.general_sp = np.ndarray((3,), dtype=np.float64, buffer=self.shm_general_sp.buf)
+        try:
+            self.shm_general_sp = shared_memory.SharedMemory(name="general_setpoint")
+            self.general_sp = np.ndarray((3,), dtype=np.float64, buffer=self.shm_general_sp.buf)
+        except FileNotFoundError:
+            self.general_sp = np.array([0.0]*3, dtype=np.float64)
+
 
     def __del__(self):
         self.master.close()

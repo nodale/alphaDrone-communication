@@ -17,13 +17,18 @@ class QuickViser:
     yr : float = 0.158
 
     def __init__(self, port=8080, verbose=True):
-        self.shm_est = shared_memory.SharedMemory(name="estimated_state")
-        self.shm_vic = shared_memory.SharedMemory(name="vicon_state")
-        self.shm_state_sp = shared_memory.SharedMemory(name="general_setpoint")
-        
-        self.est_state = np.ndarray((13,), dtype=np.float64, buffer=self.shm_est.buf)
-        self.vic_state = np.ndarray((2,6), dtype=np.float64, buffer=self.shm_vic.buf)
-        self.state_sp = np.ndarray((3,), dtype=np.float64, buffer=self.shm_state_sp.buf)
+        try: 
+            self.shm_est = shared_memory.SharedMemory(name="estimated_state")
+            self.shm_vic = shared_memory.SharedMemory(name="vicon_state")
+            self.shm_state_sp = shared_memory.SharedMemory(name="general_setpoint")
+            
+            self.est_state = np.ndarray((13,), dtype=np.float64, buffer=self.shm_est.buf)
+            self.vic_state = np.ndarray((2,6), dtype=np.float64, buffer=self.shm_vic.buf)
+            self.state_sp = np.ndarray((3,), dtype=np.float64, buffer=self.shm_state_sp.buf)
+        except FileNotFoundError:
+            self.est_state = np.zeros((13,), dtype=np.float64)
+            self.vic_state = np.zeros((2,6), dtype=np.float64)
+            self.state_sp = np.zeros((3,), dtype=np.float64)
 
         #cross offset setup
         self.cross_offset = np.array([

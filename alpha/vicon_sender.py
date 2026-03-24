@@ -10,7 +10,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('host', nargs='?', default="localhost:801")
 args = parser.parse_args()
 
-TARGET_IP   = "10.183.217.138"
+TARGET_IP   = "192.168.1.10"
 TARGET_PORT = 8020
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 

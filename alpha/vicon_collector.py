@@ -6,7 +6,7 @@ from include.quick_vicon import QuickVicon
 
 def main():
     vicon = QuickVicon(
-        address='10.183.217.138',
+        address='192.168.1.10',
         port=8020,
         block=False
     )
