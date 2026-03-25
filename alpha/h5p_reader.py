@@ -5,7 +5,7 @@ import numpy as np
 import viser
 from viser.transforms import SO3
 
-FILENAME = "past_logs/20260324_140012_LOG.h5"
+FILENAME = "past_logs/20260325_170432_LOG.h5"
 
 with h5py.File(FILENAME, "r") as f:
     print("Keys:", list(f.keys()))
@@ -14,13 +14,16 @@ with h5py.File(FILENAME, "r") as f:
 
 with h5py.File(FILENAME, "r") as f:
     vic = f["vicon"][:]  # shape (N, 7): time, x, y, z, roll, pitch, yaw
+    sp = f["setpoint"][:]  # shape (N, 7): time, x, y, z, roll, pitch, yaw
 
 t_est = vic[:, 0]
 t_est = t_est - t_est[0]
 pos_est = vic[:, 1:4]  
 rpy_est = vic[:, 4:7] 
+sp_ = sp[:, :3]
 
 N = vic.shape[0]
+M = sp_.shape[0]
 
 def rpy_to_quat(rpy):
     roll, pitch, yaw = rpy
@@ -49,6 +52,13 @@ traj_points = server.scene.add_point_cloud(
     name="trajectory",
     points=pos_est,
     colors=np.tile([0.2, 0.6, 1.0], (N, 1)),
+    point_size=0.02,
+)
+
+setpoints = server.scene.add_point_cloud(
+    name="setpoints",
+    points=sp_,
+    colors=np.tile([0.2, 0.6, 1.0], (M, 1)),
     point_size=0.02,
 )
 

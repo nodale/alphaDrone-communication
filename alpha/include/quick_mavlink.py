@@ -310,18 +310,18 @@ class QuickMav:
         self.sendPositionYawTarget(time, target[0], target[1], target[2], 0.0)
 
     def act_traverseEight(self, time, current_pos):
-        x_oscl = 0.7
-        y_oscl = 0.7
-        omega = 0.04
+        x_oscl = 1.4
+        y_oscl = 1.4
+        omega = 0.14
 
-        dist = math.dist(current_pos, self.eight_points)
+        dist = math.dist(current_pos[:2], self.eight_points[:2])
 
-        if dist < 0.03:
+        if dist < 0.10:
             self.eight_progress += 1
             self.eight_points = (
                 x_oscl * math.sin(omega * self.eight_progress),
                 y_oscl * math.sin(2 * omega * self.eight_progress),
-                -0.14
+                -0.40
             )
 
         self.sendPositionYawTarget(time, *self.eight_points, 0.0)

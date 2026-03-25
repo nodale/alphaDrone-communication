@@ -32,7 +32,7 @@ while True:
         data, addr = sock.recvfrom(1024)
         x, y, yaw, z = struct.unpack("ffff", data)
 
-        sp[2], sp[3] = -1.0 * z, 0.2 * yaw
+        sp[2], sp[3] = -1.0 * z, 0.8 * yaw
 
         _x = abs(x)
         _y = abs(y)
