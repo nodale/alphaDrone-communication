@@ -5,7 +5,7 @@ import numpy as np
 import viser
 from viser.transforms import SO3
 
-FILENAME = "past_logs/20260325_170432_LOG.h5"
+FILENAME = "past_logs/20260325_151805_LOG.h5"
 
 with h5py.File(FILENAME, "r") as f:
     print("Keys:", list(f.keys()))
@@ -14,13 +14,13 @@ with h5py.File(FILENAME, "r") as f:
 
 with h5py.File(FILENAME, "r") as f:
     vic = f["vicon"][:]  # shape (N, 7): time, x, y, z, roll, pitch, yaw
-    sp = f["setpoint"][:]  # shape (N, 7): time, x, y, z, roll, pitch, yaw
+    sp = f["setpoint"][:]
 
 t_est = vic[:, 0]
 t_est = t_est - t_est[0]
 pos_est = vic[:, 1:4]  
 rpy_est = vic[:, 4:7] 
-sp_ = sp[:, :3]
+sp_ = sp[:, 0:3]
 
 N = vic.shape[0]
 M = sp_.shape[0]
@@ -58,7 +58,7 @@ traj_points = server.scene.add_point_cloud(
 setpoints = server.scene.add_point_cloud(
     name="setpoints",
     points=sp_,
-    colors=np.tile([0.2, 0.6, 1.0], (M, 1)),
+    colors=np.tile([0.8, 0.2, 1.0], (M, 1)),
     point_size=0.02,
 )
 
@@ -153,6 +153,7 @@ def playback_loop():
             body.position = p
             body.orientation = SO3.from_quaternion(np.array([qw, qx, qy, qz]))
 
+            setpoints.points = sp_[:idx + 1]
             traj_points.points = pos_est[:idx + 1]
             traj_points.colors = np.tile([0.2, 0.6, 1.0], (idx + 1, 1))
 

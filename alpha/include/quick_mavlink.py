@@ -44,7 +44,7 @@ class QuickMav:
             self.shared_actuation = np.ndarray(self.actuation.shape, dtype=self.actuation.dtype, buffer=self.shm_actuation.buf)
 
         self.shm_general_sp = shared_memory.SharedMemory(name="general_setpoint")
-        self.general_sp = np.ndarray((3,), dtype=np.float64, buffer=self.shm_general_sp.buf)
+        self.general_sp = np.ndarray((6,), dtype=np.float64, buffer=self.shm_general_sp.buf)
 
         #try:
         #    self.shm_general_sp = shared_memory.SharedMemory(name="general_setpoint")
@@ -257,7 +257,7 @@ class QuickMav:
                 0, 0, 0,  #acceleration
                 0, 0  #yaw yaw_rate
                 )
-        self.general_sp[:] = (x, y, z)
+        self.general_sp[:] = (x, y, z, 0.0, 0.0, 0.0)
 
     def sendPositionYawTarget(self, time, x, y, z, yaw): 
         self.master.mav.set_position_target_local_ned_send(
@@ -271,7 +271,22 @@ class QuickMav:
                 0, 0, 0,  #acceleration
                 yaw, 0  #yaw yaw_rate
                 )
-        self.general_sp[:] = (x, y, z)
+        self.general_sp[:] = (x, y, z, 0.0, 0.0, 0.0)
+
+
+    def sendPositionVelocityTarget(self, time, x, y, z, vx, vy, vz): 
+        self.master.mav.set_position_target_local_ned_send(
+                time,
+                self.master.target_system,
+                self.master.target_component,
+                mavutil.mavlink.MAV_FRAME_LOCAL_NED,
+                0b0000111111000000,
+                x, y, z,  #position
+                vx, vy, vz,  #velocity
+                0, 0, 0,  #acceleration
+                0, 0  #yaw yaw_rate
+                )
+        self.general_sp[:] = (x, y, z, vx, vy, vz)
 
     def setTo_active(self):
         self.setFlightmode("OFFBOARD")
@@ -310,18 +325,24 @@ class QuickMav:
         self.sendPositionYawTarget(time, target[0], target[1], target[2], 0.0)
 
     def act_traverseEight(self, time, current_pos):
-        x_oscl = 1.4
-        y_oscl = 1.4
-        omega = 0.14
+        A = 1.0            
+        B = 1.0
+        omega = 0.1     
+        z_const = -0.40
 
-        dist = math.dist(current_pos[:2], self.eight_points[:2])
+        x = A * math.sin(omega * self.timestamp)
+        y = B * math.sin(2 * omega * self.timestamp)
+        z = z_const
+                                                               
+        vx = A * omega * math.cos(omega * self.timestamp)
+        vy = 2 * B * omega * math.cos(2 * omega * self.timestamp)
+        vz = 0.0
+        
+        dist = math.dist(current_pos[:2], (x, y))
+        #print(f"dist={dist:.3f}, t={time:.2f}")
 
-        if dist < 0.10:
-            self.eight_progress += 1
-            self.eight_points = (
-                x_oscl * math.sin(omega * self.eight_progress),
-                y_oscl * math.sin(2 * omega * self.eight_progress),
-                -0.40
-            )
-
-        self.sendPositionYawTarget(time, *self.eight_points, 0.0)
+        self.sendPositionVelocityTarget(
+            time,
+            x, y, z,
+            vx, vy, vz
+        )

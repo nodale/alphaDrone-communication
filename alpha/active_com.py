@@ -23,28 +23,45 @@ def main():
     )
     mav.sendHeartbeat()
 
-    try:
-        shm_vic = shared_memory.SharedMemory(name="vicon_state")
-        shm_init_vic = shared_memory.SharedMemory(name="vicon_init_state")
-        shm_state_sp = shared_memory.SharedMemory(name="joeystick_state_setpoint")
-        shm_actuation = shared_memory.SharedMemory(name="actuation")
+    #try:
+    #    shm_vic = shared_memory.SharedMemory(name="vicon_state")
+    #    shm_init_vic = shared_memory.SharedMemory(name="vicon_init_state")
+    #    shm_state_sp = shared_memory.SharedMemory(name="joeystick_state_setpoint")
+    #    shm_actuation = shared_memory.SharedMemory(name="actuation")
 
-        vic_state = np.ndarray((2,6), dtype=np.float64, buffer=shm_vic.buf)
-        vic_init_state = np.ndarray((2,6), dtype=np.float64, buffer=shm_init_vic.buf)
-        state_sp = np.ndarray((4,), dtype=np.float64, buffer=shm_state_sp.buf)
-        actuation = np.ndarray((4,), dtype=np.float64, buffer=shm_actuation.buf)
+    #    vic_state = np.ndarray((2,6), dtype=np.float64, buffer=shm_vic.buf)
+    #    vic_init_state = np.ndarray((2,6), dtype=np.float64, buffer=shm_init_vic.buf)
+    #    state_sp = np.ndarray((4,), dtype=np.float64, buffer=shm_state_sp.buf)
+    #    actuation = np.ndarray((4,), dtype=np.float64, buffer=shm_actuation.buf)
 
-        resource_tracker.unregister(shm_vic._name, "shared_memory")
-        resource_tracker.unregister(shm_init_vic._name, "shared_memory")
-        resource_tracker.unregister(shm_state_sp._name, "shared_memory")
-        resource_tracker.unregister(shm_actuation._name, "shared_memory")
+    #    resource_tracker.unregister(shm_vic._name, "shared_memory")
+    #    resource_tracker.unregister(shm_init_vic._name, "shared_memory")
+    #    resource_tracker.unregister(shm_state_sp._name, "shared_memory")
+    #    resource_tracker.unregister(shm_actuation._name, "shared_memory")
 
 
-    except FileNotFoundError:
-        vic_state = np.zeros((2,6), dtype=np.float64)
-        vic_init_state = np.zeros((2,6), dtype=np.float64)
-        state_sp = np.zeros((4,), dtype=np.float64)
-        actuation = np.zeros((4,), dtype=np.float64)
+    #except FileNotFoundError:
+    #    vic_state = np.zeros((2,6), dtype=np.float64)
+    #    vic_init_state = np.zeros((2,6), dtype=np.float64)
+    #    state_sp = np.zeros((4,), dtype=np.float64)
+    #    actuation = np.zeros((4,), dtype=np.float64)
+
+    shm_vic = shared_memory.SharedMemory(name="vicon_state")
+    shm_init_vic = shared_memory.SharedMemory(name="vicon_init_state")
+    shm_state_sp = shared_memory.SharedMemory(name="joeystick_state_setpoint")
+    shm_general_state_sp = shared_memory.SharedMemory(name="general_setpoint")
+    shm_actuation = shared_memory.SharedMemory(name="actuation")
+
+    vic_state = np.ndarray((2,6), dtype=np.float64, buffer=shm_vic.buf)
+    vic_init_state = np.ndarray((2,6), dtype=np.float64, buffer=shm_init_vic.buf)
+    state_sp = np.ndarray((4,), dtype=np.float64, buffer=shm_state_sp.buf)
+    general_state_sp = np.ndarray((3,), dtype=np.float64, buffer=shm_general_state_sp.buf)
+    actuation = np.ndarray((4,), dtype=np.float64, buffer=shm_actuation.buf)
+
+    resource_tracker.unregister(shm_vic._name, "shared_memory")
+    resource_tracker.unregister(shm_init_vic._name, "shared_memory")
+    resource_tracker.unregister(shm_state_sp._name, "shared_memory")
+    resource_tracker.unregister(shm_actuation._name, "shared_memory")
 
     try:
         while not keyboard.quit_flag:
@@ -54,7 +71,7 @@ def main():
                 data = np.hstack(([current_t], vic_state[0].flatten()))
                 keyboard.log_vicon(data)
                 keyboard.log_obstacle(vic_state[1])
-                keyboard.log_setpoint(state_sp)
+                keyboard.log_setpoint(general_state_sp)
                 keyboard.log_actuation(actuation)
 
                 keyboard.writer.flush()
