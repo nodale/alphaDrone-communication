@@ -181,6 +181,6 @@ class QuickKeyboard:
         self.actuation_idx += 1
 
     def log_setpoint(self, data):
-        self.setpoint_ds.resize((self.setpoint_idx + 1, 4))
+        self.setpoint_ds.resize((self.setpoint_idx + 1, 6))
         self.setpoint_ds[self.setpoint_idx] = data
         self.setpoint_idx += 1

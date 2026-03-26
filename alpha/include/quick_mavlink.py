@@ -330,12 +330,14 @@ class QuickMav:
         omega = 0.1     
         z_const = -0.40
 
-        x = A * math.sin(omega * self.timestamp)
-        y = B * math.sin(2 * omega * self.timestamp)
+        ts = time * 1e-6
+
+        x = A * math.sin(omega * ts)
+        y = B * math.sin(2 * omega * ts)
         z = z_const
                                                                
-        vx = A * omega * math.cos(omega * self.timestamp)
-        vy = 2 * B * omega * math.cos(2 * omega * self.timestamp)
+        vx = A * omega * math.cos(omega * ts)
+        vy = 2 * B * omega * math.cos(2 * omega * ts)
         vz = 0.0
         
         dist = math.dist(current_pos[:2], (x, y))
