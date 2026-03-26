@@ -67,8 +67,8 @@ class QuickKeyboard:
 
         self.setpoint_ds = self.writer.create_dataset(
             "setpoint",
-            shape=(0, 4),
-            maxshape=(None, 4),
+            shape=(0, 6),
+            maxshape=(None, 6),
             dtype=np.float32,
             chunks=True
         )
