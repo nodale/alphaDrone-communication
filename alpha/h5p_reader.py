@@ -5,7 +5,7 @@ import numpy as np
 import viser
 from viser.transforms import SO3
 
-FILENAME = "past_logs/20260401_131425_LOG.h5"
+FILENAME = "past_logs/20260401_140547_LOG.h5"
 
 with h5py.File(FILENAME, "r") as f:
     print("Keys:", list(f.keys()))
@@ -115,7 +115,7 @@ def _replay(_):
 @time_slider.on_update
 def _slider_update(event):
     global idx, playing
-    playing = False
+    #playing = False
 
     with lock:
         new_t = time_slider.value
@@ -140,21 +140,22 @@ def playback_loop():
 
     while True:
         time.sleep(0.005)
+        print(playing)
 
         if playing is False:
             last_wall_time = time.time()
             continue
 
         if playing is True:
+
             if idx >= N - 1:
-                playing = False
-                continue
+                idx = 1
 
             dt_log = t_est[idx + 1] - t_est[idx]
             dt_wall = time.time() - last_wall_time
 
-            if dt_wall < dt_log:
-                continue
+            #if dt_wall < dt_log:
+            #    continue
 
             last_wall_time = time.time()
             idx += 1
@@ -164,7 +165,7 @@ def playback_loop():
             p = pos_est[idx]
             qw, qx, qy, qz = quat_est[idx]
             body.position = p
-            body.orientation = SO3.from_quaternion(np.array([qw, qx, qy, qz]))
+            body.orientation = SO3(wxyz=np.array([qw, qx, qy, qz]))
 
             setpoints.points = sp_[:idx + 1]
             setpoints_vel[0, 0] = [sp_[idx, 0], sp_[idx, 1], sp_[idx, 2]]   

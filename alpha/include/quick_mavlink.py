@@ -324,26 +324,77 @@ class QuickMav:
 
         self.sendPositionYawTarget(time, target[0], target[1], target[2], 0.0)
 
+    #def act_traverseEight(self, time, current_pos):
+    #    if not hasattr(self, "eight_start_time"):
+    #        self.eight_start_time = time
+
+    #    t_rel = (time - self.eight_start_time) * 1e-6
+
+    #    A = 1.0            
+    #    B = 1.0
+    #    omega = 0.072     
+    #    z_const = -0.60
+
+    #    x = A * math.sin(omega * t_rel)
+    #    y = B * math.sin(2 * omega * t_rel)
+    #    z = z_const
+    #                                                               
+    #    vx = A * omega * math.cos(omega * t_rel)
+    #    vy = 2 * B * omega * math.cos(2 * omega * t_rel)
+    #    vz = 0.0
+    #    
+    #    dist = math.dist(current_pos[:2], (x, y))
+
+    #    self.sendPositionVelocityTarget(
+    #        time,
+    #        x, y, z,
+    #        vx, vy, vz
+    #    )
+
+    #import math
+
     def act_traverseEight(self, time, current_pos):
         if not hasattr(self, "eight_start_time"):
             self.eight_start_time = time
-
+                 
         t_rel = (time - self.eight_start_time) * 1e-6
 
         A = 1.0            
         B = 1.0
-        omega = 0.1     
-        z_const = -0.40
+        omega = 0.085
+        z_offset = -0.60 
 
-        x = A * math.sin(omega * t_rel)
-        y = B * math.sin(2 * omega * t_rel)
-        z = z_const
-                                                                   
-        vx = A * omega * math.cos(omega * t_rel)
-        vy = 2 * B * omega * math.cos(2 * omega * t_rel)
-        vz = 0.0
-        
-        dist = math.dist(current_pos[:2], (x, y))
+        roll = math.radians(15)
+        pitch = math.radians(10)
+
+        x0 = A * math.sin(omega * t_rel)
+        y0 = B * math.sin(2 * omega * t_rel)
+        z0 = 0.0
+
+        vx0 = A * omega * math.cos(omega * t_rel)
+        vy0 = 2 * B * omega * math.cos(2 * omega * t_rel)
+        vz0 = 0.0
+
+        cr = math.cos(roll)
+        sr = math.sin(roll)
+        cp = math.cos(pitch)
+        sp = math.sin(pitch)
+
+        x1 = x0
+        y1 = y0 * cr - z0 * sr
+        z1 = y0 * sr + z0 * cr
+
+        vx1 = vx0
+        vy1 = vy0 * cr - vz0 * sr
+        vz1 = vy0 * sr + vz0 * cr
+
+        x = x1 * cp + z1 * sp
+        y = y1
+        z = -0.60 + (-x1 * sp + z1 * cp)
+
+        vx = vx1 * cp + vz1 * sp
+        vy = vy1
+        vz = -vx1 * sp + vz1 * cp
 
         self.sendPositionVelocityTarget(
             time,
