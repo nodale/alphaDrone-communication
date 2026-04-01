@@ -5,7 +5,7 @@ import numpy as np
 import viser
 from viser.transforms import SO3
 
-FILENAME = "past_logs/20260326_125535_LOG.h5"
+FILENAME = "past_logs/20260401_131425_LOG.h5"
 
 with h5py.File(FILENAME, "r") as f:
     print("Keys:", list(f.keys()))
@@ -68,7 +68,7 @@ setpoints_vel_handle = server.scene.add_line_segments(
     name="velocity_setpoints",
     points=setpoints_vel,
     colors=(255, 20, 0),
-    line_width=10
+    line_width=2
 )
 
 body = server.scene.add_frame(
@@ -93,12 +93,6 @@ with server.gui.add_folder("Playback"):
 playing = False
 idx = 0
 lock = threading.Lock()
-
-def update_velocity():
-    global idx
-    setpoints_vel[0, 0] = [pos_est[idx, 0], pos_est[idx, 1], pos_est[idx, 2]]   
-    setpoints_vel[0, 1] = [pos_est[idx, 0] + 800*sp_vel_[idx, 0], pos_est[idx, 1] + 800*sp_vel_[idx, 1], pos_est[idx, 2] + 800*sp_vel_[idx, 2]]   
-    setpoints_vel_handle = setpoints_vel
 
 @btn_start.on_click
 def _start(_):
@@ -133,9 +127,11 @@ def _slider_update(event):
         qw, qx, qy, qz = quat_est[idx]
         body.position = p
         body.orientation = SO3(wxyz=np.array([qw, qx, qy, qz]))
-        update_velocity()
+        setpoints_vel[0, 0] = [sp_[idx, 0], sp_[idx, 1], sp_[idx, 2]]   
+        setpoints_vel[0, 1] = [sp_[idx, 0] + sp_vel_[idx, 0], sp_[idx, 1] + sp_vel_[idx, 1], sp_[idx, 2] + sp_vel_[idx, 2]]   
+        setpoints_vel_handle.points = setpoints_vel
         setpoints.points = sp_[:idx + 1]
-        traj_points.points = pos_est[: idx + 1]
+        traj_points.points = pos_est[:idx + 1]
         traj_points.colors = np.tile([0.2, 0.6, 1.0], (idx + 1, 1))
 
 def playback_loop():
@@ -171,6 +167,9 @@ def playback_loop():
             body.orientation = SO3.from_quaternion(np.array([qw, qx, qy, qz]))
 
             setpoints.points = sp_[:idx + 1]
+            setpoints_vel[0, 0] = [sp_[idx, 0], sp_[idx, 1], sp_[idx, 2]]   
+            setpoints_vel[0, 1] = [sp_[idx, 0] + sp_vel_[idx, 0], sp_[idx, 1] + sp_vel_[idx, 1], sp_[idx, 2] + sp_vel_[idx, 2]]   
+            setpoints_vel_handle.points = setpoints_vel
             traj_points.points = pos_est[:idx + 1]
             traj_points.colors = np.tile([0.2, 0.6, 1.0], (idx + 1, 1))
 

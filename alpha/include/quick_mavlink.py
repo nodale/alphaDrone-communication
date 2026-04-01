@@ -325,23 +325,25 @@ class QuickMav:
         self.sendPositionYawTarget(time, target[0], target[1], target[2], 0.0)
 
     def act_traverseEight(self, time, current_pos):
+        if not hasattr(self, "eight_start_time"):
+            self.eight_start_time = time
+
+        t_rel = (time - self.eight_start_time) * 1e-6
+
         A = 1.0            
         B = 1.0
         omega = 0.1     
         z_const = -0.40
 
-        ts = time * 1e-6
-
-        x = A * math.sin(omega * ts)
-        y = B * math.sin(2 * omega * ts)
+        x = A * math.sin(omega * t_rel)
+        y = B * math.sin(2 * omega * t_rel)
         z = z_const
-                                                               
-        vx = A * omega * math.cos(omega * ts)
-        vy = 2 * B * omega * math.cos(2 * omega * ts)
+                                                                   
+        vx = A * omega * math.cos(omega * t_rel)
+        vy = 2 * B * omega * math.cos(2 * omega * t_rel)
         vz = 0.0
         
         dist = math.dist(current_pos[:2], (x, y))
-        #print(f"dist={dist:.3f}, t={time:.2f}")
 
         self.sendPositionVelocityTarget(
             time,
