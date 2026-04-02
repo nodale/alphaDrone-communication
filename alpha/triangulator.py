@@ -1,5 +1,9 @@
 import numpy as np
+import traceback
+import time
+
 from numba import njit
+from multiprocessing import shared_memory, resource_tracker
 
 num_obj = 4
 
@@ -36,8 +40,12 @@ def quads_to_triangles(quads):
     return triangles, obj_ids
 
 def main():
+
     dist = np.zeros(1, dtype=np.float64)
-    dist_shm = shared_memory.SharedMemory(name="dist", create=True, size=dist.nbytes)
+    try:
+        dist_shm = shared_memory.SharedMemory(name="dist", create=False)
+    except FileNotFoundError:
+        dist_shm = shared_memory.SharedMemory(name="dist", create=True, size=dist.nbytes)
 
     shm_corners = shared_memory.SharedMemory(name="obstacle_corners")
     shm_vic = shared_memory.SharedMemory(name="vicon_state")
@@ -50,19 +58,34 @@ def main():
     resource_tracker.unregister(shm_vic._name, "shared_memory")
     resource_tracker.unregister(dist_shm._name, "shared_memory")
 
+    P = vic_state[0][0:3]
 
-    min_dist = 1.0
+    min_dist = np.inf
     while True:
-        triangles, obj_ids = quads_to_triangles(corners)    
-        for i in triangles:
-            edges = [(0,1), (1,2), (2,0)]
-            for a, b in edges:
-                dist = _point_segment_dist(P, i[a], i[b])
-                if dist < min_dist:
-                    min_dist = dist
+        try:
+            triangles, obj_ids = quads_to_triangles(corners[1:])    
+            for i in triangles:
+                edges = [(0,1), (1,2), (2,0)]
+                for a, b in edges:
+                    distance = _point_segment_dist(P, i[a], i[b])
+                    if distance < min_dist:
+                        min_dist = distance
 
-        dist_shared[:] = min_dist
-    
+            dist_shared[:] = min_dist
+            time.sleep(0.05)
+            print(min_dist)
+
+        except Exception as e:        
+            print("Error in main loop:", e)
+            shm_corners.close()
+            shm_vic.close()
+            dist_shm.close()
+
+            shm_corners.unlink()
+            shm_vic.unlink()
+            dist_shm.unlink()
+
+            traceback.print_exc()   
 
 if __name__ == "__main__":
     main()
