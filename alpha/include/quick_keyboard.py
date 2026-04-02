@@ -10,6 +10,8 @@ import time
 
 @dataclass
 class QuickKeyboard:
+    num_obj : int = 4
+
     quit_flag : bool = False
     pause_flag : bool = False
     reboot_flag : bool = False
@@ -49,8 +51,8 @@ class QuickKeyboard:
 
         self.obstacle_ds = self.writer.create_dataset(
             "obstacle",
-            shape=(0, 6),
-            maxshape=(None, 6),
+            shape=(0, self.num_obj - 1, 6),
+            maxshape=(None, self.num_obj -1, 6),
             dtype=np.float32,
             chunks=True
         )
@@ -171,7 +173,7 @@ class QuickKeyboard:
         self.vic_idx += 1
 
     def log_obstacle(self, data):
-        self.obstacle_ds.resize((self.obs_idx + 1, 6))
+        self.obstacle_ds.resize((self.obs_idx + 1, self.num_obj - 1, 6))
         self.obstacle_ds[self.obs_idx] = data
         self.obs_idx += 1
 

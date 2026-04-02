@@ -13,7 +13,7 @@ def main():
 
     while True:
         try:
-            vicon.update_state()
+            vicon.update()
 
             #print("Received state:", vicon.shared_state.copy())
 

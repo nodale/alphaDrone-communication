@@ -48,11 +48,11 @@ class QuickVicon:
             return timestamp, objects, corners
 
         except BlockingIOError:
-            return None, None
+            return None, None, None
 
         except Exception as e:
             print("vicon error:", e)
-            return None, None
+            return None, None, None
 
     def update(self):
         timestamp, objects, corners = self.get_data()

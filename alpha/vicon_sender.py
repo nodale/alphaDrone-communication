@@ -31,6 +31,7 @@ while True:
 
 client.SetBufferSize(1)
 client.EnableSegmentData()
+client.EnableMarkerData()
 client.SetStreamMode(ViconDataStream.Client.StreamMode.EServerPush)
 
 client.SetAxisMapping(
@@ -94,7 +95,8 @@ while True:
     msg = (
         seq,
         timestamp,
-        objects_data
+        objects_data,
+        corners_data
     )
 
     payload = packer.pack(msg)
