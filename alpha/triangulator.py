@@ -58,16 +58,14 @@ def main():
     resource_tracker.unregister(shm_vic._name, "shared_memory")
     resource_tracker.unregister(dist_shm._name, "shared_memory")
 
-    P = vic_state[0][0:3]
-
-    min_dist = np.inf
     while True:
         try:
+            min_dist = 99.9
             triangles, obj_ids = quads_to_triangles(corners[1:])    
             for i in triangles:
                 edges = [(0,1), (1,2), (2,0)]
                 for a, b in edges:
-                    distance = _point_segment_dist(P, i[a], i[b])
+                    distance = _point_segment_dist(vic_state[0][0:3], i[a], i[b])
                     if distance < min_dist:
                         min_dist = distance
 
