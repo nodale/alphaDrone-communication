@@ -7,7 +7,6 @@ from include.quick_mavlink import QuickMav
 from include.quick_vicon import QuickVicon
 from include.quick_viser import QuickViser
 
-
 def main():
     num_obj = 4
 
@@ -30,25 +29,26 @@ def main():
     shm_state_sp = shared_memory.SharedMemory(name="joeystick_state_setpoint")
     shm_general_state_sp = shared_memory.SharedMemory(name="general_setpoint")
     shm_actuation = shared_memory.SharedMemory(name="actuation")
-    shm_corners = shared_memory.SharedMemory(name="obstacle_corners")
+    shm_dist = shared_memory.SharedMemory(name="dist")
 
     vic_state = np.ndarray((num_obj,6), dtype=np.float64, buffer=shm_vic.buf)
     vic_init_state = np.ndarray((num_obj,6), dtype=np.float64, buffer=shm_init_vic.buf)
     state_sp = np.ndarray((4,), dtype=np.float64, buffer=shm_state_sp.buf)
     general_state_sp = np.ndarray((6,), dtype=np.float64, buffer=shm_general_state_sp.buf)
     actuation = np.ndarray((4,), dtype=np.float64, buffer=shm_actuation.buf)
-    corners = np.ndarray((num_obj, 4, 3), dtype=np.float64, buffer=shm_corners.buf)
+    dist = np.ndarray((1,), dtype=np.float64, buffer=shm_dist.buf)
 
     resource_tracker.unregister(shm_vic._name, "shared_memory")
     resource_tracker.unregister(shm_init_vic._name, "shared_memory")
     resource_tracker.unregister(shm_state_sp._name, "shared_memory")
     resource_tracker.unregister(shm_general_state_sp._name, "shared_memory")
     resource_tracker.unregister(shm_actuation._name, "shared_memory")
-    resource_tracker.unregister(shm_corners._name, "shared_memory")
+    resource_tracker.unregister(shm_dist._name, "shared_memory")
 
     try:
         while not keyboard.quit_flag:
             current_t = int(time.time() * 1e6) & 0xFFFFFFFF
+            print(dist)
 
             if not keyboard.pause_flag:
                 data = np.hstack(([current_t], vic_state[0].flatten()))
