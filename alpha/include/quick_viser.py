@@ -9,6 +9,8 @@ import viser
 
 @dataclass
 class QuickViser:
+    num_obj : int = 4
+
     POINT_SIZE : float = 0.01
     MAX_POINTS : int = 50
     xf : float = 0.158
@@ -36,7 +38,7 @@ class QuickViser:
         self.shm_state_sp = shared_memory.SharedMemory(name="general_setpoint")
         
         self.est_state = np.ndarray((13,), dtype=np.float64, buffer=self.shm_est.buf)
-        self.vic_state = np.ndarray((2,6), dtype=np.float64, buffer=self.shm_vic.buf)
+        self.vic_state = np.ndarray((self.num_obj,6), dtype=np.float64, buffer=self.shm_vic.buf)
         self.state_sp = np.ndarray((3,), dtype=np.float64, buffer=self.shm_state_sp.buf)
 
         #cross offset setup

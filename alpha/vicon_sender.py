@@ -42,8 +42,10 @@ client.SetAxisMapping(
 client.GetFrame()
 
 object_name = [
-    "Mr_Obstacle",
-    "Mrs_Obstacle"
+    "alphaDrone_v6",
+    "Obstacle_1",
+    "Obstacle_2",
+    "Obstacle_3",
     ]
 
 seq = 0
@@ -53,6 +55,7 @@ while True:
 
     timestamp = int(time.time() * 1e6)
     objects_data = []
+    corners_data = []
 
     for obj_id, name in enumerate(object_name):
 
@@ -68,6 +71,25 @@ while True:
             x, y, z,
             wx, wy, wz
         ])
+
+        marker_names = client.GetMarkerNames(name)
+
+        obj_corners = []
+
+        for marker in marker_names:
+            (mx_mm, my_mm, mz_mm), _ = client.GetMarkerGlobalTranslation(name, marker)
+
+            mx = mx_mm * 0.001
+            my = my_mm * 0.001
+            mz = mz_mm * 0.001
+
+            obj_corners.append([mx, my, mz])
+
+        if len(obj_corners) == 4:
+            corners_data.append((
+                obj_id,
+                obj_corners
+            ))
 
     msg = (
         seq,

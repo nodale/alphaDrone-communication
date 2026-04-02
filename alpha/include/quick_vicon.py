@@ -7,7 +7,7 @@ import msgpack
 
 @dataclass
 class QuickVicon:
-    num_objects: int = 2
+    num_objects: int = 4
     dt: float = 0.0125
     alpha_vel: float = 0.2
     alpha_omega: float = 0.2
@@ -30,6 +30,10 @@ class QuickVicon:
         self.init_shm = shared_memory.SharedMemory(name="vicon_init_state", create=True, size=self.init_state.nbytes)
         self.init_shared_state = np.ndarray(self.init_state.shape, dtype=self.init_state.dtype, buffer=self.init_shm.buf)
 
+        self.obs_corners = np.zeros((self.num_objects, 4, 3), dtype=np.float64)
+        self.obs_corners_shm = shared_memory.SharedMemory(name="obstacle_corners", create=True, size=self.obs_corners.nbytes)
+        self.shared_obs_corners = np.ndarray(self.obs_corners.shape, dtype=self.obs_corners.dtype, buffer=self.obs_corners_shm.buf)
+
     def get_data(self):
         try:
             payload, addr = self.sock.recvfrom(2048)
@@ -39,8 +43,9 @@ class QuickVicon:
             seq = msg[0]
             timestamp = msg[1]
             objects = msg[2]
+            corners = msg[3]
 
-            return timestamp, objects
+            return timestamp, objects, corners
 
         except BlockingIOError:
             return None, None
@@ -49,8 +54,8 @@ class QuickVicon:
             print("vicon error:", e)
             return None, None
 
-    def update_state(self):
-        timestamp, objects = self.get_data()
+    def update(self):
+        timestamp, objects, corners = self.get_data()
 
         if objects is None:
             return False
@@ -68,5 +73,10 @@ class QuickVicon:
                 self.state[obj_id, 3:6] = angle
 
             self.shared_state[:] = self.state
+
+            for obj_id, corner_set in corners:
+                self.obs_corners[obj_id] = np.asarray(corner_set, dtype=np.float64)
+
+            self.shared_obs_corners[:] = self.obs_corners
 
             return True
