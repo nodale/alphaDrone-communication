@@ -76,7 +76,7 @@ while True:
 
         obj_corners = []
 
-        for marker in marker_names:
+        for marker, _ in marker_names:
             (mx_mm, my_mm, mz_mm), _ = client.GetMarkerGlobalTranslation(name, marker)
 
             mx = mx_mm * 0.001
