@@ -5,7 +5,7 @@ import numpy as np
 import viser
 from viser.transforms import SO3
 
-FILENAME = "past_logs/20260401_140547_LOG.h5"
+FILENAME = "past_logs/20260407_130800_LOG.h5"
 
 with h5py.File(FILENAME, "r") as f:
     print("Keys:", list(f.keys()))
@@ -140,7 +140,6 @@ def playback_loop():
 
     while True:
         time.sleep(0.005)
-        print(playing)
 
         if playing is False:
             last_wall_time = time.time()

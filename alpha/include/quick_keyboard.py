@@ -58,6 +58,24 @@ class QuickKeyboard:
         )
         self.obs_idx = 0
 
+        self.corner_ds= self.writer.create_dataset(
+            "corner",
+            shape=(0, self.num_obj - 1, 4, 3),
+            maxshape=(None, self.num_obj -1, 4, 3),
+            dtype=np.float32,
+            chunks=True
+        )
+        self.corner_idx = 0
+
+        self.distance_ds= self.writer.create_dataset(
+            "minimum_distance",
+            shape=(0, 1),
+            maxshape=(None, 1),
+            dtype=np.float32,
+            chunks=True
+        )
+        self.distance_idx = 0
+
         self.actuation_ds = self.writer.create_dataset(
             "actuation",
             shape=(0, 4),
@@ -176,6 +194,16 @@ class QuickKeyboard:
         self.obstacle_ds.resize((self.obs_idx + 1, self.num_obj - 1, 6))
         self.obstacle_ds[self.obs_idx] = data
         self.obs_idx += 1
+
+    def log_corner(self, data):
+        self.corner_ds.resize((self.corner_idx + 1, self.num_obj - 1, 4, 3))
+        self.corner_ds[self.corner_idx] = data
+        self.corner_idx += 1
+
+    def log_distance(self, data):
+        self.distance_ds.resize((self.distance_idx + 1, 1))
+        self.distance_ds[self.distance_idx] = data
+        self.distance_idx += 1
 
     def log_actuation(self, data):
         self.actuation_ds.resize((self.actuation_idx + 1, 4))
