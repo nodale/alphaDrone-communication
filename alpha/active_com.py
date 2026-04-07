@@ -107,6 +107,8 @@ def main():
                     (vic_state[0][3], vic_state[0][4], vic_state[0][5])
                     )
 
+            mav.sendLyapunovScalar(current_t, dist)
+
             next_time += LOOP_PERIOD
             sleep_time = next_time - time.perf_counter()
             if sleep_time > 0:

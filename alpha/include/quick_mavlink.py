@@ -15,6 +15,7 @@ class QuickMav:
     timeBoot : float = 0.0
 
     def __init__(self, address, baudrate, create=False, **kwargs):
+        mavutil.set_dialect('common')
         self.timeBoot = time.time()
         try:
             self.master = mavutil.mavlink_connection(address, baudrate, robust_parsing=True, source_system=255, source_component=0, autoreconnect=True, udp_timeout=1)
@@ -287,6 +288,12 @@ class QuickMav:
                 0, 0  #yaw yaw_rate
                 )
         self.general_sp[:] = (x, y, z, vx, vy, vz)
+
+    def sendLyapunovScalar(self, time, value): 
+        self.master.mav.lyapunov_scalar_send(
+                time,
+                value
+            )
 
     def setTo_active(self):
         self.setFlightmode("OFFBOARD")

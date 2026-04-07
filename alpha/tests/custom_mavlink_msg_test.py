@@ -1,8 +1,15 @@
+import pymavlink
 from pymavlink import mavutil
 import time
 import math
 
+mavutil.set_dialect('common')
+
 master = mavutil.mavlink_connection("udpout:127.0.0.1:14580")
+try:
+    master = mavutil.mavlink_connection("udpout:192.168.0.3:14561", 921600)
+except:
+    print("not connection :(")
 
 for i in range(2):
     master.mav.heartbeat_send(
@@ -13,8 +20,9 @@ for i in range(2):
             mavutil.mavlink.MAV_STATE_ACTIVE       
             )
     master.wait_heartbeat(timeout=1)
+    print("sending heartbeat")
 
-master.wait_heartbeat()
+master.wait_heartbeat(timeout=1)
 print("Connected to system:", master.target_system)
 
 timestamp = int(time.time() * 1e6)
