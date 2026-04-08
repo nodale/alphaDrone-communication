@@ -23,7 +23,7 @@ class LinearLocalPlanner:
         # params
         self.a_max = 0.05
 
-        self.k_dev = 0.1
+        self.k_dev = 0.3
         self.k_dir = 1.0
 
         # for pos setpoin
@@ -142,7 +142,7 @@ class LinearLocalPlanner:
         directionTarget_ = self.k_dev * self.get_position_dev(curr_pos) + dir_norm * self.k_dir
         dir = directionTarget_ / np.linalg.norm(directionTarget_)
         curvature = self.get_current_curvature()
-        controller_target = self.direction_target_function(dir,curvature)
+        controller_target = self.direction_target_function(dir,curvature) * self.velocity
         controller_target = np.array(controller_target)
 
         curve = self.spline_list[self.current_curve_i]
