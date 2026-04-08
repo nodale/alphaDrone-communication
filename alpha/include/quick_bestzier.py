@@ -13,10 +13,10 @@ class QuickBestzier:
         self.llp = LinearLocalPlanner(self.splineList, self.pVel)
 
         _temp_array = np.array(
-                    [[0.0, 0.1],
-                    [0.4, -0.8],
-                    [0.8, 0.8],
-                    [1.2, -0.1]], 
+                    [[0.0, 0.0],
+                    [0.8, -0.6],
+                    [1.6, 0.8],
+                    [2.4, 0.2]], 
                 dtype=np.float64)
         _bezier_curve = CubicSpline(p0=_temp_array[0][:], p1=_temp_array[1][:], p2=_temp_array[2][:], p3=_temp_array[3][:])
         self.splineList.append(_bezier_curve)

@@ -64,7 +64,7 @@ def main():
             )
             vis.update_status(status_msg)
 
-            time.sleep(0.002) 
+            time.sleep(0.005) 
 
         except Exception as e:
             vis.shm_est.close()
