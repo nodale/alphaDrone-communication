@@ -26,6 +26,9 @@ class LinearLocalPlanner:
         self.k_dev = 0.1
         self.k_dir = 1.0
 
+        # for pos setpoin
+        self.lookahead = 0.05
+
     def transition(self):
         if self.current_curve_i + 1 < len(self.spline_list):
             # Update the current curve and other necessary operations
@@ -85,6 +88,7 @@ class LinearLocalPlanner:
             u = 0.0  
             self.transition()
 
+
         self.closest_u = self.current_u
         #print("this is the closest point ", self.closest_u)
 
@@ -142,7 +146,9 @@ class LinearLocalPlanner:
         controller_target = np.array(controller_target)
 
         curve = self.spline_list[self.current_curve_i]
-        pos_on_curve = curve.get_position(self.closest_u)
+
+        _temp_u = np.clip(self.closest_u, 0.0, 0.95)
+        pos_on_curve = curve.get_position(_temp_u + self.lookahead)
 
         return pos_on_curve, controller_target
 
