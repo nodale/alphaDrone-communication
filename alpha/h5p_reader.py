@@ -5,7 +5,7 @@ import numpy as np
 import viser
 from viser.transforms import SO3
 
-FILENAME = "past_logs/20260408_153505_LOG.h5"
+FILENAME = "past_logs/20260408_162817_LOG.h5"
 
 with h5py.File(FILENAME, "r") as f:
     print("Keys:", list(f.keys()))
@@ -80,9 +80,11 @@ body = server.scene.add_frame(
 
 safety_envelope_handle = server.scene.add_cylinder(
     name="safety_envelope",
+    cast_shadow=False,
+    receive_shadow=False,
     radius=1.0,
-    height=1.0,
-    opacity=0.1,
+    height=0.1,
+    opacity=0.4,
     color=(180,80,0),
     position=np.zeros((3,))
         )

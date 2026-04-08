@@ -50,7 +50,7 @@ def main():
 
     try:
         while not keyboard.quit_flag:
-            current_t = time.monotonic_ns()
+            current_t = int(time.time() * 1e6)
 
             if not keyboard.pause_flag:
                 data = np.hstack(([current_t], vic_state[0].flatten()))
