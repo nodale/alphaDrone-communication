@@ -98,6 +98,9 @@ def main():
             if keyboard.traverse_eight_flag:
                 mav.act_traverseEight(current_t, (vic_state[0][0], vic_state[0][1], vic_state[0][2]))
 
+            if keyboard.traverse_bezier_flag:
+                mav.act_traverseBezier(current_t, (vic_state[0][0], vic_state[0][1], vic_state[0][2]))
+
             if keyboard.manual_setpoint_flag:
                 mav.sendPositionYawTarget(current_t, state_sp[0], state_sp[1], state_sp[2], state_sp[3])
 

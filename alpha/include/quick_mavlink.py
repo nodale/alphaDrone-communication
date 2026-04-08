@@ -4,6 +4,8 @@ from pymavlink import mavutil
 from pymavlink.dialects.v20 import common as mavlink2
 from multiprocessing import shared_memory, resource_tracker
 
+from quick_bestzier import QuickBestzier
+
 import numpy as np
 
 import time
@@ -34,6 +36,13 @@ class QuickMav:
 
         self.eight_points = (0.0, 0.0, -0.3)
         self.eight_progress = 0.0
+
+        self.trajectory = QuickBestzier(
+                [
+                    (0.4, 0.2, -0.5),
+                    (0.8, -0.4, -0.5),
+                    (1.2, -0.04, -0.5),
+                    ])
 
         if create==True:
             self.state = np.array([0.0]*13, dtype=np.float64)
@@ -330,6 +339,19 @@ class QuickMav:
             self.square_progress = (self.square_progress + 1) % 4
 
         self.sendPositionYawTarget(time, target[0], target[1], target[2], 0.0)
+
+    def act_traverseBezier(self, time, current_pos):
+        _pos_sp, _vel_sp, _t_target = self.trajectory.get_setpoint(
+                    current_pos,
+                    lookahead=0.04,
+                    speed=1.0
+                )
+
+        self.sendPositionVelocityTarget(
+            time,
+            _pos_sp[0], _pos_sp[1], _pos_sp[2],
+            _vel_sp[0], _vel_sp[1], _vel_sp[2]
+        )
 
     #def act_traverseEight(self, time, current_pos):
     #    if not hasattr(self, "eight_start_time"):
