@@ -15,9 +15,10 @@ with h5py.File(FILENAME, "r") as f:
 with h5py.File(FILENAME, "r") as f:
     vic = f["vicon"][:]  # shape (N, 7): time, x, y, z, roll, pitch, yaw
     sp = f["setpoint"][:]
+    safety_envelope = f["minimum_distance"][:]
 
-t_est = vic[:, 0]
-t_est = t_est - t_est[0]
+t_est = abs(vic[:, 0])
+t_est = abs(t_est - t_est[0])
 pos_est = vic[:, 1:4]  
 rpy_est = vic[:, 4:7] 
 sp_ = sp[:, 0:3]
@@ -77,6 +78,15 @@ body = server.scene.add_frame(
     axes_radius=0.02,
 )
 
+safety_envelope_handle = server.scene.add_cylinder(
+    name="safety_envelope",
+    radius=1.0,
+    height=1.0,
+    opacity=0.1,
+    color=(180,80,0),
+    position=np.zeros((3,))
+        )
+
 with server.gui.add_folder("Playback"):
     btn_start = server.gui.add_button("Start")
     btn_pause = server.gui.add_button("Pause")
@@ -133,6 +143,8 @@ def _slider_update(event):
         setpoints.points = sp_[:idx + 1]
         traj_points.points = pos_est[:idx + 1]
         traj_points.colors = np.tile([0.2, 0.6, 1.0], (idx + 1, 1))
+        safety_envelope_handle.position = pos_est[idx]
+        safety_envelope_handle.radius = safety_envelope[idx].item()
 
 def playback_loop():
     global idx, playing
@@ -172,6 +184,8 @@ def playback_loop():
             setpoints_vel_handle.points = setpoints_vel
             traj_points.points = pos_est[:idx + 1]
             traj_points.colors = np.tile([0.2, 0.6, 1.0], (idx + 1, 1))
+            safety_envelope_handle.position = pos_est[idx]
+            safety_envelope_handle.radius = safety_envelope[idx].item()
 
 threading.Thread(target=playback_loop, daemon=True).start()
 threading.Event().wait()
