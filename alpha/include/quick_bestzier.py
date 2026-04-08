@@ -1,8 +1,7 @@
 from dataclasses import dataclass
 
-from tra_spline import CubicSpline
-from tra_planner import LinearLocalPlanner
-from quick_state import QuickState
+from include.tra_spline import CubicSpline
+from include.tra_planner import LinearLocalPlanner
 
 import numpy as np
 
@@ -11,16 +10,16 @@ class QuickBestzier:
 
     def __init__(self):
         self.splineList = []
-        self.llp = linearLocalPlanner(self.splineList, self.pVel)
+        self.llp = LinearLocalPlanner(self.splineList, self.pVel)
 
         _temp_array = np.array(
-                [
-                    [0.0, 0.0],
+                    [[0.0, 0.0],
                     [0.4, -0.4],
                     [0.8, 0.2],
-                    [1.2, 0.0]
-                    ], dtype=np.float64)
-        self.splineList.append(_temp_array)
+                    [1.2, 0.0]], 
+                dtype=np.float64)
+        _bezier_curve = CubicSpline(p0=_temp_array[0][:], p1=_temp_array[1][:], p2=_temp_array[2][:], p3=_temp_array[3][:])
+        self.splineList.append(_bezier_curve)
 
     def get_setpoints(self, current_pos):
         self.llp.update_position(current_pos[:2])

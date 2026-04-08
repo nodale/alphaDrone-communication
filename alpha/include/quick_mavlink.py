@@ -337,11 +337,10 @@ class QuickMav:
 
     def act_traverseBezier(self, time, current_pos):
         _pos_sp, _vel_sp = self.bezier.get_setpoints(current_pos)
-
         self.sendPositionVelocityTarget(
             time,
-            _pos_sp[0], _pos_sp[1], _pos_sp[2],
-            _vel_sp[0], _vel_sp[1], _vel_sp[2]
+            _pos_sp[0], _pos_sp[1], -0.5,
+            _vel_sp[0], _vel_sp[1], 0.0
         )
 
     #def act_traverseEight(self, time, current_pos):

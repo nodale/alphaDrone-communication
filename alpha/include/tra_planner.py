@@ -1,5 +1,5 @@
 import numpy as np
-from tra_spline import CubicSpline
+from include.tra_spline import CubicSpline
 from typing import List
 
 controller_target = {
