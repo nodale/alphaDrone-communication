@@ -14,8 +14,8 @@ class QuickBestzier:
 
         _temp_array = np.array(
                     [[0.0, 0.0],
-                    [0.8, -0.6],
-                    [1.6, 0.8],
+                    [0.8, -0.8],
+                    [1.6, 1.2],
                     [2.4, 0.2]], 
                 dtype=np.float64)
         _bezier_curve = CubicSpline(p0=_temp_array[0][:], p1=_temp_array[1][:], p2=_temp_array[2][:], p3=_temp_array[3][:])

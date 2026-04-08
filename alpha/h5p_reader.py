@@ -5,7 +5,7 @@ import numpy as np
 import viser
 from viser.transforms import SO3
 
-FILENAME = "past_logs/20260408_134055_LOG.h5"
+FILENAME = "past_logs/20260408_153505_LOG.h5"
 
 with h5py.File(FILENAME, "r") as f:
     print("Keys:", list(f.keys()))
