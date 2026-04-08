@@ -5,29 +5,7 @@ import numpy as np
 import viser
 from viser.transforms import SO3
 
-#FILENAME = "past_logs/20260408_164210_LOG.h5"
-FILENAME = "tests/cropped.h5"
-
-with h5py.File(FILENAME, "r") as f:
-    print("Keys:", list(f.keys()))
-    for k in f.keys():
-        print(k, f[k].shape)
-
-with h5py.File(FILENAME, "r") as f:
-    vic = f["vicon"][:]  # shape (N, 7): time, x, y, z, roll, pitch, yaw
-    sp = f["setpoint"][:]
-    safety_envelope = f["minimum_distance"][:]
-
-print(vic)
-t_est = abs(vic[:, 0])
-t_est = abs(t_est - t_est[0])
-pos_est = vic[:, 1:4]  
-rpy_est = vic[:, 4:7] 
-sp_ = sp[:, 0:3]
-sp_vel_ = sp[:, 3:6]
-
-N = vic.shape[0]
-M = sp_.shape[0]
+#########################################################################
 
 def rpy_to_quat(rpy):
     roll, pitch, yaw = rpy
@@ -43,6 +21,38 @@ def rpy_to_quat(rpy):
     qy = cr * sp * cy + sr * cp * sy
     qz = cr * cp * sy - sr * sp * cy
     return np.array([qw, qx, qy, qz])
+
+def build_cube_vertices(bottom_corners, height=0.6):
+    bottom_corners = np.array(bottom_corners)
+    top_corners = bottom_corners + np.array([0, 0, height])
+    return np.vstack([bottom_corners, top_corners])
+
+#########################################################################
+
+#FILENAME = "past_logs/20260408_164210_LOG.h5"
+FILENAME = "tests/cropped.h5"
+
+with h5py.File(FILENAME, "r") as f:
+    print("Keys:", list(f.keys()))
+    for k in f.keys():
+        print(k, f[k].shape)
+
+with h5py.File(FILENAME, "r") as f:
+    vic = f["vicon"][:]  # shape (N, 7): time, x, y, z, roll, pitch, yaw
+    sp = f["setpoint"][:]
+    safety_envelope = f["minimum_distance"][:]
+    corners = f["corner"][:]
+
+t_est = abs(vic[:, 0])
+t_est = abs(t_est - t_est[0])
+pos_est = vic[:, 1:4]  
+rpy_est = vic[:, 4:7] 
+sp_ = sp[:, 0:3]
+sp_vel_ = sp[:, 3:6]
+
+N = vic.shape[0]
+M = sp_.shape[0]
+
 
 quat_est = np.array([rpy_to_quat(rpy_est[i]) for i in range(N)])
 
@@ -90,6 +100,30 @@ safety_envelope_handle = server.scene.add_cylinder(
     color=(180,80,0),
     position=np.zeros((3,))
         )
+
+num_cubes = corners.shape[1] 
+cube_handles = []
+
+for i in range(num_cubes):
+    verts = build_cube_vertices(corners[0, i]) 
+    faces = np.array([
+        [0,1,2],[0,2,3],    #bot
+        [4,5,6],[4,6,7],    #top
+        [0,1,5],[0,5,4],    #front
+        [2,3,7],[2,7,6],    #back
+        [0,3,7],[0,7,4],    #left
+        [1,2,6],[1,6,5]     #right
+    ])
+    
+    handle = server.scene.add_mesh_simple(
+        name=f"/cube{i}",
+        vertices=verts,
+        faces=faces,
+        color=(200, 50 + i*50, 50),
+        opacity=0.5
+    )
+    cube_handles.append(handle)
+
 
 with server.gui.add_folder("Playback"):
     btn_start = server.gui.add_button("Start")
@@ -149,6 +183,10 @@ def _slider_update(event):
         traj_points.colors = np.tile([0.2, 0.6, 1.0], (idx + 1, 1))
         safety_envelope_handle.position = pos_est[idx]
         safety_envelope_handle.radius = safety_envelope[idx].item()
+
+        for i in range(num_cubes):
+            verts = build_cube_vertices(corners[idx, i])
+            cube_handles[i].vertices = verts
 
 
 
