@@ -5,7 +5,8 @@ import numpy as np
 import viser
 from viser.transforms import SO3
 
-FILENAME = "past_logs/20260408_162817_LOG.h5"
+#FILENAME = "past_logs/20260408_164210_LOG.h5"
+FILENAME = "tests/cropped.h5"
 
 with h5py.File(FILENAME, "r") as f:
     print("Keys:", list(f.keys()))
@@ -17,6 +18,7 @@ with h5py.File(FILENAME, "r") as f:
     sp = f["setpoint"][:]
     safety_envelope = f["minimum_distance"][:]
 
+print(vic)
 t_est = abs(vic[:, 0])
 t_est = abs(t_est - t_est[0])
 pos_est = vic[:, 1:4]  
@@ -147,6 +149,8 @@ def _slider_update(event):
         traj_points.colors = np.tile([0.2, 0.6, 1.0], (idx + 1, 1))
         safety_envelope_handle.position = pos_est[idx]
         safety_envelope_handle.radius = safety_envelope[idx].item()
+
+
 
 def playback_loop():
     global idx, playing
