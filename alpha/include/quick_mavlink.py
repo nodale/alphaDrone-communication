@@ -37,12 +37,7 @@ class QuickMav:
         self.eight_points = (0.0, 0.0, -0.3)
         self.eight_progress = 0.0
 
-        self.trajectory = QuickBestzier(
-                [
-                    (0.4, 0.2, -0.5),
-                    (0.8, -0.4, -0.5),
-                    (1.2, -0.04, -0.5),
-                    ])
+        self.bezier = QuickBestzier()
 
         if create==True:
             self.state = np.array([0.0]*13, dtype=np.float64)
@@ -341,11 +336,7 @@ class QuickMav:
         self.sendPositionYawTarget(time, target[0], target[1], target[2], 0.0)
 
     def act_traverseBezier(self, time, current_pos):
-        _pos_sp, _vel_sp, _t_target = self.trajectory.get_setpoint(
-                    current_pos,
-                    lookahead=0.01,
-                    speed=0.1
-                )
+        _pos_sp, _vel_sp = self.bezier.get_setpoints(current_pos)
 
         self.sendPositionVelocityTarget(
             time,

@@ -141,7 +141,10 @@ class LinearLocalPlanner:
         controller_target = self.direction_target_function(dir,curvature)
         controller_target = np.array(controller_target)
 
-        return controller_target
+        curve = self.spline_list[self.current_curve_i]
+        pos_on_curve = curve.get_position(self.closest_u)
+
+        return pos_on_curve, controller_target
 
 
 if __name__ == "__main__":
