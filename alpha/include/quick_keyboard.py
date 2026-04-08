@@ -110,7 +110,7 @@ class QuickKeyboard:
         print("Press 'b' + Enter to set the drone to activate")
         print("Press 'v' + Enter to set the drone to traverse square")
         print("Press 'c' + Enter to set the drone to traverse eight")
-        print("Press 'b' + Enter to set the drone to traverse bezier")
+        print("Press 'z' + Enter to set the drone to traverse bezier")
 
         print("Press 'x' + Enter to use manual setpoint")
 
@@ -183,14 +183,14 @@ class QuickKeyboard:
                     self.traverse_bezier_flag = False
                     self.manual_setpoint_flag = True
                     print("USING MANUAL SETPOINT")
-                if key.lower() == 'b':
+                if key.lower() == 'z':
                     self.set_to_lift_flag = False
                     self.set_to_land_flag = False
                     self.traverse_square_flag = False
                     self.traverse_eight_flag = False
                     self.traverse_bezier_flag = True
                     self.manual_setpoint_flag = False
-                    print("USING MANUAL SETPOINT")
+                    print("TRAVERSING BEZIER")
 
     def start(self):
         threading.Thread(target=self._keyboard_listener, daemon=True).start()

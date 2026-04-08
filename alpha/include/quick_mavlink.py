@@ -4,7 +4,7 @@ from pymavlink import mavutil
 from pymavlink.dialects.v20 import common as mavlink2
 from multiprocessing import shared_memory, resource_tracker
 
-from quick_bestzier import QuickBestzier
+from include.quick_bestzier import QuickBestzier
 
 import numpy as np
 
@@ -343,8 +343,8 @@ class QuickMav:
     def act_traverseBezier(self, time, current_pos):
         _pos_sp, _vel_sp, _t_target = self.trajectory.get_setpoint(
                     current_pos,
-                    lookahead=0.04,
-                    speed=1.0
+                    lookahead=0.01,
+                    speed=0.1
                 )
 
         self.sendPositionVelocityTarget(
