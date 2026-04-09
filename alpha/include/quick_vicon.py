@@ -77,6 +77,9 @@ class QuickVicon:
             for obj_id, corner_set in corners:
                 self.obs_corners[obj_id] = np.asarray(corner_set, dtype=np.float64) - self.init_shared_state[0, 0:3]
 
+                for vertex in self.obs_corners[obj_id]:
+                    vertex = vertex - self.init_shared_state[0, 0:3]
+
             self.shared_obs_corners[:] = self.obs_corners
 
             return True

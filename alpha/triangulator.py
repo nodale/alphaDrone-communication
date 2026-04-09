@@ -21,6 +21,26 @@ def _point_segment_dist(p, a, b):
     diff = p - proj
     return np.sqrt(diff[0]**2 + diff[1]**2 + diff[2]**2)
 
+@njit
+def _point_segment_dist_2d(p, a, b):
+    ax, ay = a[0], a[1]
+    bx, by = b[0], b[1]
+    px, py = p[0], p[1]
+
+    abx = bx - ax
+    aby = by - ay
+
+    t = ((px - ax) * abx + (py - ay) * aby) / (abx**2 + aby**2 + EPS)
+    t = min(max(t, 0.0), 1.0)
+
+    projx = ax + t * abx
+    projy = ay + t * aby
+
+    dx = px - projx
+    dy = py - projy
+
+    return np.sqrt(dx**2 + dy**2)
+
 TRI_INDICES = np.array([[0,1,2], [0,2,3]], dtype=np.int32)
 
 # transforms rectangles into triangles
@@ -65,13 +85,12 @@ def main():
             for i in triangles:
                 edges = [(0,1), (1,2), (2,0)]
                 for a, b in edges:
-                    distance = _point_segment_dist(vic_state[0][0:3], i[a], i[b])
+                    distance = _point_segment_dist_2d(vic_state[0][0:3], i[a], i[b])
                     if distance < min_dist:
                         min_dist = distance
 
             dist_shared[:] = min_dist
-            time.sleep(0.05)
-            print(min_dist)
+            time.sleep(0.02)
 
         except Exception as e:        
             print("Error in main loop:", e)

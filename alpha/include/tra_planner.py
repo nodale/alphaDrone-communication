@@ -27,7 +27,7 @@ class LinearLocalPlanner:
         self.k_dir = 1.0
 
         # for pos setpoin
-        self.lookahead = 0.05
+        self.lookahead = 0.01
 
     def transition(self):
         if self.current_curve_i + 1 < len(self.spline_list):

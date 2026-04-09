@@ -22,15 +22,13 @@ def rpy_to_quat(rpy):
     qz = cr * cp * sy - sr * sp * cy
     return np.array([qw, qx, qy, qz])
 
-def build_cube_vertices(bottom_corners, height=0.6):
-    bottom_corners = np.array(bottom_corners)
-    top_corners = bottom_corners + np.array([0, 0, height])
-    return np.vstack([bottom_corners, top_corners])
+def build_rectangle_vertices(bottom_corners):
+    return np.array(bottom_corners)
 
 #########################################################################
 
-#FILENAME = "past_logs/20260408_164210_LOG.h5"
-FILENAME = "tests/cropped.h5"
+FILENAME = "past_logs/20260409_103911_LOG.h5"
+#FILENAME = "tests/cropped.h5"
 
 with h5py.File(FILENAME, "r") as f:
     print("Keys:", list(f.keys()))
@@ -105,22 +103,23 @@ num_cubes = corners.shape[1]
 cube_handles = []
 
 for i in range(num_cubes):
-    verts = build_cube_vertices(corners[0, i]) 
+    verts = build_rectangle_vertices(corners[0, i])
     faces = np.array([
-        [0,1,2],[0,2,3],    #bot
-        [4,5,6],[4,6,7],    #top
-        [0,1,5],[0,5,4],    #front
-        [2,3,7],[2,7,6],    #back
-        [0,3,7],[0,7,4],    #left
-        [1,2,6],[1,6,5]     #right
-    ])
-    
+        [0, 1, 2],
+        [0, 2, 3],
+        [1, 2, 3],
+    ]) 
+
     handle = server.scene.add_mesh_simple(
         name=f"/cube{i}",
+        cast_shadow=False,
+        receive_shadow=False,
+        flat_shading=True,
+        side="double",
         vertices=verts,
         faces=faces,
         color=(200, 50 + i*50, 50),
-        opacity=0.5
+        opacity=1.0
     )
     cube_handles.append(handle)
 
@@ -185,9 +184,8 @@ def _slider_update(event):
         safety_envelope_handle.radius = safety_envelope[idx].item()
 
         for i in range(num_cubes):
-            verts = build_cube_vertices(corners[idx, i])
+            verts = build_rectangle_vertices(corners[idx, i])
             cube_handles[i].vertices = verts
-
 
 
 def playback_loop():
