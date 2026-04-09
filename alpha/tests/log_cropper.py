@@ -22,8 +22,8 @@ def crop_h5_by_index(input_file, output_file, start_idx, end_idx):
 
 # Example usage
 crop_h5_by_index(
-    input_file="../past_logs/20260408_164210_LOG.h5",
+    input_file="../past_logs/20260409_114851_LOG.h5",
     output_file="cropped.h5",
-    start_idx=7445,
-    end_idx=9000
+    start_idx=3888,
+    end_idx=5548
 )

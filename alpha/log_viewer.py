@@ -27,7 +27,20 @@ def build_rectangle_vertices(bottom_corners):
 
 #########################################################################
 
-FILENAME = "past_logs/20260409_114851_LOG.h5"
+#this is how you can access the flight log
+#with keys: ['actuation', 'corner', 'estimated', 'minimum_distance', 'obstacle', 'setpoint', 'vicon']
+#and shapes: 
+# actuation (N, 4) - (front right, front left, bottom left, bottom right)
+# corner (N, M, 4, 3) - four crners in 3D relative to the drone's init position
+# estimated (0, 14) - not used rn
+# minimum_distance (N, 1)
+# obstacle (N, M, 6) - pose of CoM of the obstacles
+# setpoint (N, 6) - (x, y, z, vx, vy, vz)
+# vicon (N, 7) - (tiem, x, y, z, roll, pitch, yaw)
+# with N ebing the number of timestamps, and timestamp is in nanosecond btw
+# with M being the number of obstacles
+
+FILENAME = "past_logs/09_04_2026-cropped_LOG.h5"
 #FILENAME = "tests/cropped.h5"
 
 with h5py.File(FILENAME, "r") as f:
@@ -35,11 +48,14 @@ with h5py.File(FILENAME, "r") as f:
     for k in f.keys():
         print(k, f[k].shape)
 
+
 with h5py.File(FILENAME, "r") as f:
-    vic = f["vicon"][:]  # shape (N, 7): time, x, y, z, roll, pitch, yaw
+    vic = f["vicon"][:] 
     sp = f["setpoint"][:]
     safety_envelope = f["minimum_distance"][:]
     corners = f["corner"][:]
+
+#########################################################################
 
 t_est = abs(vic[:, 0])
 t_est = abs(t_est - t_est[0])
