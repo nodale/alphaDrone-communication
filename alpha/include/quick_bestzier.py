@@ -6,7 +6,7 @@ from include.tra_planner import LinearLocalPlanner
 import numpy as np
 
 class QuickBestzier:
-    pVel : float = 0.4
+    pVel : float = 1.6
 
     def __init__(self):
         self.splineList = []

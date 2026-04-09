@@ -27,7 +27,7 @@ def build_rectangle_vertices(bottom_corners):
 
 #########################################################################
 
-FILENAME = "past_logs/20260409_103911_LOG.h5"
+FILENAME = "past_logs/20260409_114851_LOG.h5"
 #FILENAME = "tests/cropped.h5"
 
 with h5py.File(FILENAME, "r") as f:
