@@ -1,3 +1,6 @@
+import os
+os.environ["MAVLINK20"] = "1"
+
 import pymavlink
 from pymavlink import mavutil
 import time
@@ -29,10 +32,17 @@ timestamp = int(time.time() * 1e6)
 seq = 0
 while True:
     value = math.sin(time.time())
+    control = [value * 1.0, value * 2.0, value * 3.0, value * 4.0]
 
+    print(master.mav.__module__)
+    master.mav.low_level_control_send(
+        timestamp=timestamp,
+        timestamp_sample=timestamp,
+        control=control
+    )
     master.mav.lyapunov_scalar_send(
-        timestamp,
-        value
+        timestamp=timestamp,
+        value=value
     )
 
     print("msg num : ", seq)
