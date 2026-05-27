@@ -6,6 +6,7 @@ from include.quick_keyboard import QuickKeyboard
 from include.quick_mavlink import QuickMav
 from include.quick_vicon import QuickVicon
 from include.quick_viser import QuickViser
+from include.quick_hongi import Controller
 
 def main():
     num_obj = 4
