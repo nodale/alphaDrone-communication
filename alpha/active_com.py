@@ -6,12 +6,12 @@ from include.quick_keyboard import QuickKeyboard
 from include.quick_mavlink import QuickMav
 from include.quick_vicon import QuickVicon
 from include.quick_viser import QuickViser
-from include.quick_hongi import Controller
+from include.quick_hongi import QuickHongi
 
 def main():
     num_obj = 4
 
-    LOOP_HZ = 100
+    LOOP_HZ = 200
     LOOP_PERIOD = 1.0 / LOOP_HZ
     next_time = time.perf_counter()
 
@@ -32,6 +32,7 @@ def main():
     shm_actuation = shared_memory.SharedMemory(name="actuation")
     shm_dist = shared_memory.SharedMemory(name="dist")
     shm_corner = shared_memory.SharedMemory(name="obstacle_corners")
+    shm_hongi = shared_memory.SharedMemory(name="low_level_control")
 
     vic_state = np.ndarray((num_obj,6), dtype=np.float64, buffer=shm_vic.buf)
     vic_init_state = np.ndarray((num_obj,6), dtype=np.float64, buffer=shm_init_vic.buf)
@@ -40,6 +41,7 @@ def main():
     actuation = np.ndarray((4,), dtype=np.float64, buffer=shm_actuation.buf)
     dist = np.ndarray((1,), dtype=np.float64, buffer=shm_dist.buf)
     corner = np.ndarray((num_obj, 4, 3), dtype=np.float64, buffer=shm_corner.buf)
+    hongi = np.ndarray((4,), dtype=np.float64, buffer=shm_corner.buf)
 
     resource_tracker.unregister(shm_vic._name, "shared_memory")
     resource_tracker.unregister(shm_init_vic._name, "shared_memory")
@@ -48,6 +50,17 @@ def main():
     resource_tracker.unregister(shm_actuation._name, "shared_memory")
     resource_tracker.unregister(shm_dist._name, "shared_memory")
     resource_tracker.unregister(shm_corner._name, "shared_memory")
+    resource_tracker.unregister(shm_hongi._name, "shared_memory")
+
+    #dummies for testing
+    #vic_state = np.zeros((num_obj,6), dtype=np.float64)
+    #vic_init_state = np.zeros((num_obj,6), dtype=np.float64)
+    #state_sp = np.zeros((4,), dtype=np.float64)
+    #general_state_sp = np.zeros((6,), dtype=np.float64)
+    #actuation = np.zeros((4,), dtype=np.float64)
+    #dist = np.zeros((1,), dtype=np.float64)
+    #corner = np.zeros((num_obj, 4, 3), dtype=np.float64)
+    #hongi = np.zeros((4,), dtype=np.float64)
 
     try:
         while not keyboard.quit_flag:
@@ -104,6 +117,9 @@ def main():
 
             if keyboard.manual_setpoint_flag:
                 mav.sendPositionYawTarget(current_t, state_sp[0], state_sp[1], state_sp[2], state_sp[3])
+
+            if keyboard.activate_hongi_flag:
+                mav.sendSwitchControl(hongi)
 
             mav.sendOdometry(
                     current_t,

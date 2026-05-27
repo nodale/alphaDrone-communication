@@ -26,6 +26,7 @@ class QuickKeyboard:
     traverse_eight_flag : bool = False
     traverse_bezier_flag : bool = False
     manual_setpoint_flag : bool = False
+    activate_hongi_flag : bool = False
 
     def __init__(self, file="past_logs/LOG.h5"):
         prefix = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -147,6 +148,7 @@ class QuickKeyboard:
                     self.traverse_eight_flag = False
                     self.traverse_bezier_flag = False
                     self.manual_setpoint_flag = False
+                    self.activate_hongi_flag = False
                     print("SET TO LIFT")
                 if key.lower() == 'n':
                     self.set_to_lift_flag = False
@@ -155,6 +157,7 @@ class QuickKeyboard:
                     self.traverse_eight_flag = False
                     self.traverse_bezier_flag = False
                     self.manual_setpoint_flag = False
+                    self.activate_hongi_flag = False
                     print("SET TO LAND")
                 if key.lower() == 'b':
                     self.set_to_active_flag = True
@@ -166,6 +169,7 @@ class QuickKeyboard:
                     self.traverse_eight_flag = False
                     self.traverse_bezier_flag = False
                     self.manual_setpoint_flag = False
+                    self.activate_hongi_flag = False
                     print("TRAVERSING SQUARE")
                 if key.lower() == 'c':
                     self.set_to_lift_flag = False
@@ -174,6 +178,7 @@ class QuickKeyboard:
                     self.traverse_eight_flag = True
                     self.traverse_bezier_flag = False
                     self.manual_setpoint_flag = False
+                    self.activate_hongi_flag = False
                     print("TRAVERSING EIGHT")
                 if key.lower() == 'x':
                     self.set_to_lift_flag = False
@@ -182,6 +187,7 @@ class QuickKeyboard:
                     self.traverse_eight_flag = False
                     self.traverse_bezier_flag = False
                     self.manual_setpoint_flag = True
+                    self.activate_hongi_flag = False
                     print("USING MANUAL SETPOINT")
                 if key.lower() == 'z':
                     self.set_to_lift_flag = False
@@ -190,7 +196,17 @@ class QuickKeyboard:
                     self.traverse_eight_flag = False
                     self.traverse_bezier_flag = True
                     self.manual_setpoint_flag = False
+                    self.activate_hongi_flag = False
                     print("TRAVERSING BEZIER")
+                if key.lower() == 'h':
+                    self.set_to_lift_flag = False
+                    self.set_to_land_flag = False
+                    self.traverse_square_flag = False
+                    self.traverse_eight_flag = False
+                    self.traverse_bezier_flag = False
+                    self.manual_setpoint_flag = False
+                    self.activate_hongi_flag = True
+                    print("HONGI ACTIVATED")
 
     def start(self):
         threading.Thread(target=self._keyboard_listener, daemon=True).start()

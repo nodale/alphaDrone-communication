@@ -9,21 +9,21 @@ from include.quick_hongi import QuickHongi
 
 controller = QuickHongi()
 
-state = torch.tensor([
+states = torch.tensor([
     0.0, 0.0, 0.0,
     0.0, 0.0, 0.0,
     0.0, 0.0, 0.0,
     0.0, 0.0, 0.0,
                       ])
 
-setpoint = torch.tensor([
-    0.0, 0.0, -1.0,
+setpoints = torch.tensor([
     0.0, 0.0, 0.0,
     0.0, 0.0, 0.0,
+    0.0, 1.0, 0.0,
     0.0, 0.0, 0.0,
                       ])
 
-act = controller.get_action()
+act = controller.get_action(states=states, setpoints=setpoints)
 print(act)
 
 
