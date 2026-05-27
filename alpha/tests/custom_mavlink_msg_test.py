@@ -38,13 +38,15 @@ while True:
     master.mav.low_level_control_send(
         timestamp=timestamp,
         timestamp_sample=timestamp,
-        control=control
+        control=control,
+        hpc_on=1,
+        hac_on=1
     )
     master.mav.lyapunov_scalar_send(
         timestamp=timestamp,
-        value=value
+        value=value,
     )
 
     print("msg num : ", seq)
     seq += 1
-    time.sleep(0.4)
+    time.sleep(0.01)

@@ -9,9 +9,9 @@ User=me
 WorkingDirectory=/home/me/drone/alphaDrone-communication/alpha
 ExecStart=/home/me/drone/mavenv/bin/python /home/me/drone/alphaDrone-communication/alpha/hongi_process.py
 Restart=always
-RestartSec=2
-StandardOutput=append:/home/me/drone/hongi.log
-StandardError=append:/home/me/drone/hongi.log
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
 Environment="PATH=/home/me/drone/mavenv/bin:/usr/bin:/bin"
 
 [Install]

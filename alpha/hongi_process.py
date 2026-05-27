@@ -1,12 +1,9 @@
 import struct
-
-import numpy as np
 import torch
+import numpy as np
 
 from multiprocessing import shared_memory
 from include.quick_hongi import QuickHongi
-
-import torch
 
 def _q2e(q):
     q = q / q.norm(dim=-1, keepdim=True)
@@ -31,14 +28,13 @@ def main():
     shm_low_level_control = shared_memory.SharedMemory(name="low_level_control", create=True, size=low_level_control.nbytes)
     shared_low_level_control = np.ndarray(low_level_control.shape, dtype=low_level_control.dtype, buffer=shm_low_level_control.buf)
 
-    state = np.array([0.0]*13, dtype=np.float64)
-    shm = shared_memory.SharedMemory(name="estimated_state", create=False, size=state.nbytes)
-    shared_state = np.ndarray(state.shape, dtype=state.dtype, buffer=shm.buf)
 
-    general_sp = np.zeros(12, dtype=np.float64)
-    general_shm = shared_memory.SharedMemory(name="general_setpoint", create=False, size=general_sp.nbytes)
-    general_shared_sp = np.ndarray(general_sp.shape, dtype=general_sp.dtype, buffer=general_shm.buf)
-    general_shared_sp[:] = general_sp
+    shm = shared_memory.SharedMemory(name="estimated_state")
+    general_shm = shared_memory.SharedMemory(name="general_setpoint")
+
+    state = np.array([0.0]*13, dtype=np.float64, buffer=shm)
+    general_sp = np.zeros(6, dtype=np.float64, buffer=general_shm)
+
 
     while True:
         try:
@@ -67,6 +63,8 @@ def main():
 
         except Exception as e:        
             print("Error in main loop:", e)
+            shm.close()
+            shm.unlink()
             state_shm.close()
             state_shm.unlink()
             general_shm.close()

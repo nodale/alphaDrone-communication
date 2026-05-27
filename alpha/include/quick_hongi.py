@@ -5,7 +5,6 @@ import numpy as np
 import torch
 import socket
 
-
 @dataclass
 class QuickHongi:
     def __init__(self, device="cpu"):
