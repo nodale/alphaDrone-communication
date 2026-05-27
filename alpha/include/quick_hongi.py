@@ -56,7 +56,7 @@ class QuickHongi:
         hover = 9.28795
         A_MAX = 5.76155
 
-        _K_torch = torch.tensor(normalized_feedback_law, device=self.device)
+        _K_torch = torch.tensor(normalized_feedback_law, dtype=states.dtype, device=self.device)
         _K_torch = self._remap_actuators_torch(_K_torch)
         _K_torch = self._reorder_torch(_K_torch)
         _K_torch = self._torch_enu_to_ned(_K_torch)
@@ -65,8 +65,8 @@ class QuickHongi:
 
         #action = normalized_feedback_law @ np.asarray(tracking_error)
         action = tracking_error @ _K_torch.T
-        action = np.clip(action, -1, 1)
-        applied_action =  hover + action * A_MAX
-        return applied_action
+        action = torch.clamp(action, -1, 1)
+        applied_action = hover + action * A_MAX
+        return applied_action.detach().cpu().numpy()
 
         #ORDER = ['X', 'XDOT', 'Y', 'YDOT', 'Z', 'ZDOT', 'PHI', 'THETA', 'PSI', 'P', 'Q', 'R']
