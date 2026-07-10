@@ -7,8 +7,8 @@ import numpy as np
 import shm.channels as channels
 from shm.bus import ShmReader, ShmWriter
 from mavlink.connection import MavlinkConnection
-from operator.keyboard import KeyboardHandler
-from operator.logger import FlightLogger
+from ops.keyboard import KeyboardHandler
+from ops.logger import FlightLogger
 from trajectories import REGISTRY
 
 _ADDRESS   = "udpout:192.168.0.3:14561"

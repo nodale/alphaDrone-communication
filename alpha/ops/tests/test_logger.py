@@ -5,7 +5,7 @@ import h5py
 import numpy as np
 import pytest
 
-from operator.logger import FlightLogger, _DATASETS
+from ops.logger import FlightLogger, _DATASETS
 
 
 @pytest.fixture

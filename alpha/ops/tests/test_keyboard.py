@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 import pytest
 
-from operator.keyboard import KeyboardHandler, KEYMAP, Key
+from ops.keyboard import KeyboardHandler, KEYMAP, Key
 
 
 def test_keymap_valid_kinds():
@@ -19,7 +19,7 @@ def test_keymap_all_have_description_and_action():
 
 
 def _make_handler():
-    with patch("operator.keyboard.threading.Thread"):  # don't spawn background thread
+    with patch("ops.keyboard.threading.Thread"):  # don't spawn background thread
         with patch("builtins.print"):
             kb = KeyboardHandler()
     return kb

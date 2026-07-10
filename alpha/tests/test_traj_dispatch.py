@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 import pytest
 
-from operator.keyboard import KEYMAP
+from ops.keyboard import KEYMAP
 from trajectories import REGISTRY
 from trajectories.base import Setpoint
 
@@ -29,8 +29,8 @@ def test_mode_key_produces_setpoint(key_char, action):
 
 @pytest.mark.parametrize("key_char,action", _MODE_PAIRS, ids=[p[1] for p in _MODE_PAIRS])
 def test_mode_switch_calls_reset(key_char, action):
-    with patch("operator.keyboard.threading.Thread"), patch("builtins.print"):
-        from operator.keyboard import KeyboardHandler
+    with patch("ops.keyboard.threading.Thread"), patch("builtins.print"):
+        from ops.keyboard import KeyboardHandler
         kb = KeyboardHandler()
 
     kb._on_key(key_char)

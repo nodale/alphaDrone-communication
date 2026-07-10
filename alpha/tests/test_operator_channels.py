@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from operator.logger import FlightLogger, _DATASETS
+from ops.logger import FlightLogger, _DATASETS
 import shm.channels as channels
 
 # Mapping from logger dataset name → shm channel, for those that share layout.

@@ -5,7 +5,7 @@ python -m pytest \
     shm/tests/ \
     vicon/tests/ \
     mavlink/tests/ \
-    operator/tests/ \
+    ops/tests/ \
     trajectories/tests/ \
     tests/ \
     -v "$@"
