@@ -18,14 +18,18 @@ class ShmWriter:
         nbytes = int(np.prod(channel.shape)) * np.dtype(channel.dtype).itemsize
         try:
             self._shm = shared_memory.SharedMemory(name=channel.name, create=True, size=nbytes)
+            self._owner = True
         except FileExistsError:
             self._shm = shared_memory.SharedMemory(name=channel.name, create=False)
+            self._owner = False
         self.data = np.ndarray(channel.shape, dtype=channel.dtype, buffer=self._shm.buf)
-        self.data[:] = np.zeros(channel.shape, dtype=channel.dtype)
+        if self._owner:
+            self.data[:] = np.zeros(channel.shape, dtype=channel.dtype)
 
     def close(self):
         self._shm.close()
-        self._shm.unlink()
+        if self._owner:
+            self._shm.unlink()
 
 
 class ShmReader:
