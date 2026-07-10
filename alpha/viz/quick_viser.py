@@ -1,334 +1,154 @@
-from dataclasses import dataclass
-from multiprocessing import shared_memory
+from pathlib import Path
 
 import numpy as np
 import viser
 
-#state is (x, y, z, vx, vy, vz, roll, pitch, yaw, roll_ang_vel, pitch_ang_vel, yaw_ang_vel)
+try:
+    from viser_urdf import ViserUrdf
+    _URDF_AVAILABLE = True
+except ImportError:
+    _URDF_AVAILABLE = False
+
+_TRAIL    = 50
+_PT_SIZE  = 0.01
+_HDG_LEN  = 0.3     # metres
 
 
-@dataclass
-class QuickViser:
-    num_obj : int = 4
-
-    POINT_SIZE : float = 0.01
-    MAX_POINTS : int = 50
-    xf : float = 0.158
-    xb : float = 0.158
-    yl : float = 0.158
-    yr : float = 0.158
-
-    def __init__(self, port=8080, verbose=True):
-        #try: 
-        #    self.shm_est = shared_memory.SharedMemory(name="estimated_state")
-        #    self.shm_vic = shared_memory.SharedMemory(name="vicon_state")
-        #    self.shm_state_sp = shared_memory.SharedMemory(name="general_setpoint")
-        #    
-        #    self.est_state = np.ndarray((13,), dtype=np.float64, buffer=self.shm_est.buf)
-        #    self.vic_state = np.ndarray((2,6), dtype=np.float64, buffer=self.shm_vic.buf)
-        #    self.state_sp = np.ndarray((3,), dtype=np.float64, buffer=self.shm_state_sp.buf)
-        #except FileNotFoundError:
-        #    self.est_state = np.zeros((13,), dtype=np.float64)
-        #    self.vic_state = np.zeros((2,6), dtype=np.float64)
-        #    self.state_sp = np.zeros((3,), dtype=np.float64)
+def _rpy_to_wxyz(rpy: np.ndarray) -> np.ndarray:
+    r, p, y = rpy[0] / 2, rpy[1] / 2, rpy[2] / 2
+    cr, sr = np.cos(r), np.sin(r)
+    cp, sp = np.cos(p), np.sin(p)
+    cy, sy = np.cos(y), np.sin(y)
+    return np.array(
+        [cr*cp*cy + sr*sp*sy, sr*cp*cy - cr*sp*sy,
+         cr*sp*cy + sr*cp*sy, cr*cp*sy - sr*sp*cy],
+        dtype=np.float32,
+    )
 
 
-        self.shm_est = shared_memory.SharedMemory(name="estimated_state")
-        self.shm_vic = shared_memory.SharedMemory(name="vicon_state")
-        self.shm_state_sp = shared_memory.SharedMemory(name="general_setpoint")
-        
-        self.est_state = np.ndarray((13,), dtype=np.float64, buffer=self.shm_est.buf)
-        self.vic_state = np.ndarray((self.num_obj,6), dtype=np.float64, buffer=self.shm_vic.buf)
-        self.state_sp = np.ndarray((3,), dtype=np.float64, buffer=self.shm_state_sp.buf)
+def _quat_rotate(wxyz: np.ndarray, v: np.ndarray) -> np.ndarray:
+    w, x, y, z = wxyz
+    return np.array([
+        (1-2*(y*y+z*z))*v[0] + 2*(x*y-z*w)*v[1] + 2*(x*z+y*w)*v[2],
+          2*(x*y+z*w)*v[0] + (1-2*(x*x+z*z))*v[1] + 2*(y*z-x*w)*v[2],
+          2*(x*z-y*w)*v[0] + 2*(y*z+x*w)*v[1] + (1-2*(x*x+y*y))*v[2],
+    ], dtype=np.float32)
 
-        #cross offset setup
-        self.cross_offset = np.array([
-            [ self.xf,  self.yr, 0.0],   
-            [ self.xf, -self.yl, 0.0],   
-            [-self.xb, -self.yl, 0.0],   
-            [-self.xb, self.yr, 0.0],   
-        ], dtype=np.float32)
 
-        #viser setup
+class DroneViser:
+    """3D visualizer for drone state. No shared memory knowledge.
+
+    state_est  : (13,) — x,y,z, vx,vy,vz, qw,qx,qy,qz, wx,wy,wz
+    vicon_state: (N,6) — per-object x,y,z, rx,ry,rz (Euler XYZ)
+    setpoint   : (6,)  — x,y,z, vx,vy,vz
+    """
+
+    def __init__(self, port: int = 8080, urdf_path: str = None, verbose: bool = False):
         self.server = viser.ViserServer(port=port, verbose=verbose)
-        self.server.scene.set_up_direction("-z") #adheres to PX4 orientation
+        self.server.scene.set_up_direction("-z")
 
-        #adding grids
-        self.server.scene.add_grid(name="xy", plane="xy", width=10, height=10, cell_size=1.0)
-        self.server.scene.add_grid(name="xz", plane="xz", width=10, height=10, cell_size=1.0)
-        self.server.scene.add_grid(name="yz", plane="yz", width=10, height=10, cell_size=1.0)
+        for plane in ("xy", "xz", "yz"):
+            self.server.scene.add_grid(name=plane, plane=plane, width=10, height=10, cell_size=1.0)
 
-        #point clouds for the positions
-        self.est_odo_points = np.zeros((self.MAX_POINTS, 3), dtype=np.float32)
-        self.est_num_points = 0 
-        self.vic_odo_points = np.zeros((self.MAX_POINTS, 3), dtype=np.float32)
-        self.vic_num_points = 0
+        # Rolling position trails
+        self._est_trail = np.zeros((_TRAIL, 3), dtype=np.float32)
+        self._vic_trail = np.zeros((_TRAIL, 3), dtype=np.float32)
+        self._n_est = self._n_vic = 0
+        self._cloud_est = self.server.scene.add_point_cloud(
+            "trail/ekf2",  self._est_trail, colors=(255, 0,   0), point_size=_PT_SIZE)
+        self._cloud_vic = self.server.scene.add_point_cloud(
+            "trail/vicon", self._vic_trail, colors=(0,   0, 255), point_size=_PT_SIZE)
+        self._cloud_sp  = self.server.scene.add_point_cloud(
+            "trail/sp",    np.zeros((1, 3), dtype=np.float32), colors=(0, 255, 0), point_size=_PT_SIZE)
 
-        self.estimated_point_cloud_handle = self.server.scene.add_point_cloud(
-            name="EKF2",
-            points=self.est_odo_points,
-            colors=(255, 0, 0),
-            point_size=self.POINT_SIZE,
-        )
+        # Velocity arrow (estimated only — vicon carries no velocity data)
+        self._vel = self.server.scene.add_line_segments(
+            "velocity/ekf2", np.zeros((1, 2, 3), dtype=np.float32), colors=(255, 80, 0), line_width=2)
 
-        self.vicon_point_cloud_handle = self.server.scene.add_point_cloud(
-            name="vicon",
-            points=self.vic_odo_points,
-            colors=(0, 0, 255),
-            point_size=self.POINT_SIZE,
-        )
+        # Heading arrows
+        self._hdg_est = self.server.scene.add_line_segments(
+            "heading/ekf2",  np.zeros((1, 2, 3), dtype=np.float32), colors=(0, 255,   0), line_width=4)
+        self._hdg_vic = self.server.scene.add_line_segments(
+            "heading/vicon", np.zeros((1, 2, 3), dtype=np.float32), colors=(0, 200, 255), line_width=4)
 
-        #point clouds for the state setpoints
-        self.sp_points = np.zeros((self.MAX_POINTS, 3), dtype=np.float32)
-        self.sp_num_points = 0 
+        # Drone pose frames — URDF attaches to these if available
+        self._frame_est = self.server.scene.add_frame("drone/ekf2")
+        self._frame_vic = self.server.scene.add_frame("drone/vicon")
 
-        self.sp_point_cloud_handle = self.server.scene.add_point_cloud(
-            name="setpoint",
-            points=self.sp_points,
-            colors=(0, 255, 0),
-            point_size=self.POINT_SIZE,
-        )
+        self._urdf_est = self._urdf_vic = None
+        if urdf_path and _URDF_AVAILABLE:
+            self._urdf_est = ViserUrdf(self.server, Path(urdf_path), root_node_name="drone/ekf2")
+            self._urdf_vic = ViserUrdf(self.server, Path(urdf_path), root_node_name="drone/vicon")
+            self._urdf_est.update_cfg({})
+            self._urdf_vic.update_cfg({})
+        elif urdf_path:
+            print("[viser] viser_urdf not installed — URDF model disabled, showing frame axes")
 
-        #adding lines for velocity
-        self.vel_line_est = np.zeros((1, 2, 3), dtype=np.float32)
-        self.vel_handle_est = self.server.scene.add_line_segments(
-            name="velocity_est",
-            points=self.vel_line_est,
-            colors=(255, 20, 0),
-            line_width=2
-        )
+        # Obstacles
+        self._obstacles: dict = {}
 
-        self.vel_line_vic = np.zeros((1, 2, 3), dtype=np.float32)
-        self.vel_handle_vic = self.server.scene.add_line_segments(
-            name="velocity_vic",
-            points=self.vel_line_vic,
-            colors=(0, 20, 255),
-            line_width=2
-        )
+        # Status panel
+        self._status = self.server.gui.add_text("Status", " ", multiline=True, disabled=True)
 
-        #add X of the drones
-        self.x_lines_est = np.zeros((4, 2, 3), dtype=np.float32)
-        self.x_handle_est = self.server.scene.add_line_segments(
-            name="drone_est",
-            points=self.x_lines_est,
-            colors=(100, 20, 20),
-            line_width=2
-        )
+    # ------------------------------------------------------------------ #
 
-        self.x_lines_vic = np.zeros((4, 2, 3), dtype=np.float32)
-        self.x_handle_vic = self.server.scene.add_line_segments(
-            name="drone_vic",
-            points=self.x_lines_vic,
-            colors=(20, 20, 100),
-            line_width=2
-        )
+    def _push_trail(self, trail: np.ndarray, n: int, pos: np.ndarray) -> int:
+        if n < _TRAIL:
+            trail[n] = pos
+            return n + 1
+        trail[:-1] = trail[1:]
+        trail[-1] = pos
+        return n
 
-        #add actuation lines
-        self.act_lines_est = np.zeros((4, 2, 3), dtype=np.float32)
-        self.act_handle_est = self.server.scene.add_line_segments(
-            name="actuation_est",
-            points=self.act_lines_est,
-            colors=(255, 150, 0),
-            line_width=4,
-        )
+    def update(self, state_est: np.ndarray, vicon_state: np.ndarray,
+               setpoint: np.ndarray, obstacles: np.ndarray) -> None:
+        pos_est  = state_est[:3].astype(np.float32)
+        vel_est  = state_est[3:6].astype(np.float32)
+        wxyz_est = state_est[6:10].astype(np.float32)   # already qw,qx,qy,qz
+        pos_vic  = vicon_state[0, :3].astype(np.float32)
+        wxyz_vic = _rpy_to_wxyz(vicon_state[0, 3:6])
 
-        self.act_lines_vic = np.zeros((4, 2, 3), dtype=np.float32)
-        self.act_handle_vic = self.server.scene.add_line_segments(
-            name="actuation_vic",
-            points=self.act_lines_vic,
-            colors=(0, 150, 255),
-            line_width=4,
-        )
+        # Trails
+        self._n_est = self._push_trail(self._est_trail, self._n_est, pos_est)
+        self._n_vic = self._push_trail(self._vic_trail, self._n_vic, pos_vic)
+        self._cloud_est.points = self._est_trail[:self._n_est]
+        self._cloud_vic.points = self._vic_trail[:self._n_vic]
+        self._cloud_sp.points  = setpoint[:3].reshape(1, 3).astype(np.float32)
 
-        # heading visualization
-        self.heading_line_est = np.zeros((1, 2, 3), dtype=np.float32)
-        self.heading_handle_est = self.server.scene.add_line_segments(
-            name="heading_est",
-            points=self.heading_line_est,
-            colors=(0, 255, 0), 
-            line_width=4,
-        )
+        # Velocity
+        self._vel.points = np.array([[pos_est, pos_est + vel_est]], dtype=np.float32)
 
-        self.heading_line_vic = np.zeros((1, 2, 3), dtype=np.float32)
-        self.heading_handle_vic = self.server.scene.add_line_segments(
-            name="heading_vic",
-            points=self.heading_line_vic,
-            colors=(0, 200, 255),
-            line_width=4,
-        )
+        # Heading
+        fwd = np.array([_HDG_LEN, 0.0, 0.0], dtype=np.float32)
+        self._hdg_est.points = np.array([[pos_est, pos_est + _quat_rotate(wxyz_est, fwd)]], dtype=np.float32)
+        self._hdg_vic.points = np.array([[pos_vic, pos_vic + _quat_rotate(wxyz_vic, fwd)]], dtype=np.float32)
 
-        #add text debugs
-        self.status_handle = self.server.gui.add_text("Status", " ", multiline=True, disabled=True)
+        # Drone model
+        self._frame_est.position = pos_est
+        self._frame_est.wxyz     = wxyz_est
+        self._frame_vic.position = pos_vic
+        self._frame_vic.wxyz     = wxyz_vic
 
-    def update_point_clouds(self, state_est, state_vic, state_sp):
-        if state_est is not None:
-            if self.est_num_points < self.MAX_POINTS:
-                self.est_odo_points[self.est_num_points] = [state_est[0], state_est[1], state_est[2]]
-                self.est_num_points += 1
+        # Obstacles
+        current = set()
+        for i, box in enumerate(obstacles):
+            name = f"obstacle/box_{i}"
+            current.add(name)
+            if name in self._obstacles:
+                self._obstacles[name].position = box[:3].astype(np.float32)
             else:
-                self.est_odo_points[:-1] = self.est_odo_points[1:]
-                self.est_odo_points[-1] = [state_est[0], state_est[1], state_est[2]]
-
-            self.estimated_point_cloud_handle.points = self.est_odo_points[:self.est_num_points]
-
-        if state_vic is not None:
-            if self.vic_num_points < self.MAX_POINTS:
-                self.vic_odo_points[self.vic_num_points] = [state_vic[0], state_vic[1], state_vic[2]]
-                self.vic_num_points += 1
-            else:
-                self.vic_odo_points[:-1] = self.vic_odo_points[1:]
-                self.vic_odo_points[-1] = [state_vic[0], state_vic[1], state_vic[2]]
-
-            self.vicon_point_cloud_handle.points = self.vic_odo_points[:self.vic_num_points]
-        
-        if state_sp is not None:
-            self.sp_point_cloud_handle.points = state_sp
-
-    def update_velocity_lines(self, state_est):
-        if state_est is not None:
-            self.vel_line_est[0, 0] = [state_est[0], state_est[1], state_est[2]]   
-            self.vel_line_est[0, 1] = [state_est[0] + state_est[3]*1, state_est[1] + state_est[4]*1, state_est[2] + state_est[5]*1]
-            self.vel_handle_est.points = self.vel_line_est
-        
-    def _rpy_to_rot(self, roll, pitch, yaw):
-        cr, sr = np.cos(roll), np.sin(roll)
-        cp, sp = np.cos(pitch), np.sin(pitch)
-        cy, sy = np.cos(yaw), np.sin(yaw)
-
-        R = np.array([
-            [cy*cp, cy*sp*sr - sy*cr, cy*sp*cr + sy*sr],
-            [sy*cp, sy*sp*sr + cy*cr, sy*sp*cr - cy*sr],
-            [-sp,   cp*sr,            cp*cr]
-        ], dtype=np.float32)
-
-        return R
-
-    def _transform_points(self, state):
-        R = self._rpy_to_rot(state[6], state[7], state[8])
-        points_world = (R @ self.cross_offset.T).T + np.array((state[0], state[1], state[2]), dtype=np.float32)
-        return points_world
-
-    def _gen_x(self, points):
-        lines = np.zeros((4, 2, 3), dtype=np.float32)
-        lines[0] = [points[0], points[3]]
-        lines[1] = [points[1], points[2]]
-        lines[2] = [points[0], points[2]]
-        lines[3] = [points[1], points[3]]
-        return lines
-
-    def update_x(self, state_est, state_vic):
-        if state_est is not None:
-            center = [state_est[0], state_est[1], state_est[2]]
-
-            self.est_x_world = self._transform_points(state_est)
-            x_lines_est = self._gen_x(self.est_x_world)
-            self.x_handle_est.points = x_lines_est
-
-        if state_vic is not None:
-            center = [state_vic[0], state_vic[1], state_vic[2]]
-            temp_state = (state_vic[0], state_vic[1], state_vic[2], 0.0, 0.0, 0.0, state_vic[3], state_vic[4], state_vic[5], 0.0, 0.0, 0.0)
-
-            self.vic_x_world = self._transform_points(temp_state)
-            x_lines_vic = self._gen_x(self.vic_x_world)
-            self.x_handle_vic.points = x_lines_vic
-
-
-    def _gen_actuation(
-            self,
-            x,
-            state,
-            actuation,
-            scale=0.15
-        ):
-        R = self._rpy_to_rot(state[6], state[7], state[8])
-
-        thrust_dir_body = np.array([0.0, 0.0, -1.0], dtype=np.float32)
-        thrust_dir_world = R @ thrust_dir_body
-
-        lines = np.zeros((4, 2, 3), dtype=np.float32)
-
-        for i in range(4):
-            start = x[i]
-            end = start + thrust_dir_world * actuation[i] * scale
-
-            lines[i, 0] = start
-            lines[i, 1] = end
-
-        return lines
-
-    def update_actuation(self, state_est, state_vic, actuation):
-        if actuation is not None:
-            if state_est is not None:
-                self.act_lines_est = self._gen_actuation(
-                        self.est_x_world,
-                        state_est,
-                        actuation,
-                        0.15
-                    )
-                self.act_handle_est.points = self.act_lines_est
-
-            if state_vic is not None:
-                self.act_lines_vic = self._gen_actuation(
-                        self.vic_x_world,
-                        state_vic,
-                        actuation,
-                        0.15
-                    )
-                self.act_handle_vic.points = self.act_lines_vic
-
-    def _heading_dir(self, roll, pitch, yaw):
-        R = self._rpy_to_rot(roll, pitch, yaw)
-        forward_body = np.array([1.0, 0.0, 0.0], dtype=np.float32)
-        return R @ forward_body
-
-    def update_heading(self, state_est, state_vic, scale=0.3):
-        if state_est is not None:
-            pos = np.array(state_est[0:3], dtype=np.float32)
-            heading = self._heading_dir(state_est[6], state_est[7], state_est[8])
-
-            self.heading_line_est[0, 0] = pos
-            self.heading_line_est[0, 1] = pos + heading * scale
-            self.heading_handle_est.points = self.heading_line_est
-
-        if state_vic is not None:
-            pos = np.array(state_vic[0:3], dtype=np.float32)
-            heading = self._heading_dir(state_vic[3], state_vic[4], state_vic[5])
-
-            self.heading_line_vic[0, 0] = pos
-            self.heading_line_vic[0, 1] = pos + heading * scale
-            self.heading_handle_vic.points = self.heading_line_vic
-
-    def update_obstacles(self, state_boxes):
-        if not hasattr(self, 'obstacle_boxes'):
-            self.obstacle_boxes = {}
-
-        current_boxes = set()
-
-        for i, box in enumerate(state_boxes):
-            name = f"box_{i}"
-            current_boxes.add(name)
-
-            if name in self.obstacle_boxes:
-                # update existing box
-                handle = self.obstacle_boxes[name]
-                handle.position = box[0:3]
-            else:
-                # add new box
-                handle = self.server.scene.add_box(
-                    name=name,
-                    cast_shadow=False,
-                    receive_shadow=False,
-                    dimensions=(0.2, 0.2, 0.2),
-                    position=box[0:3],
-                    wxyz=(1.0,0.0,0.0,0.0),
-                    color=(5, 5, 5)
+                self._obstacles[name] = self.server.scene.add_box(
+                    name=name, dimensions=(0.2, 0.2, 0.2),
+                    position=box[:3], wxyz=(1, 0, 0, 0), color=(5, 5, 5),
+                    cast_shadow=False, receive_shadow=False,
                 )
-                self.obstacle_boxes[name] = handle
+        for gone in set(self._obstacles) - current:
+            self.server.scene.remove(gone)
+            del self._obstacles[gone]
 
-        for old_name in list(self.obstacle_boxes.keys()):
-            if old_name not in current_boxes:
-                self.server.scene.remove(old_name)
-                del self.obstacle_boxes[old_name]
-
-    def update_status(self, msg):
-            self.status_handle.value = msg
+        self._status.value = (
+            f"vic  pos: {pos_vic[0]:.3f}  {pos_vic[1]:.3f}  {pos_vic[2]:.3f}\n"
+            f"vic  rot: {vicon_state[0,3]:.3f}  {vicon_state[0,4]:.3f}  {vicon_state[0,5]:.3f}\n"
+            f"est  pos: {pos_est[0]:.3f}  {pos_est[1]:.3f}  {pos_est[2]:.3f}\n"
+            f"est quat: {wxyz_est[0]:.3f}  {wxyz_est[1]:.3f}  {wxyz_est[2]:.3f}  {wxyz_est[3]:.3f}\n"
+        )

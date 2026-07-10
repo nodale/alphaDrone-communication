@@ -1,157 +1,121 @@
-import os
-os.environ["MAVLINK20"] = "1"
-
+import gc
+import signal
 import time
+
 import numpy as np
 
-from multiprocessing import shared_memory, resource_tracker
-from joystick.quick_keyboard import QuickKeyboard
-from mavlink.quick_mavlink import QuickMav
-from vicon.quick_vicon import QuickVicon
-from viz.quick_viser import QuickViser
-from control.quick_hongi import QuickHongi
+import shm.channels as channels
+from shm.bus import ShmReader, ShmWriter
+from mavlink.connection import MavlinkConnection
+from operator.keyboard import KeyboardHandler
+from operator.logger import FlightLogger
+from trajectories import REGISTRY
+
+_ADDRESS   = "udpout:192.168.0.3:14561"
+_BAUDRATE  = 921600
+_LOOP_HZ   = 200
+_LOOP_PERIOD = 1.0 / _LOOP_HZ
+
 
 def main():
-    num_obj = 4
+    gc.collect()
+    gc.disable()
 
-    LOOP_HZ = 200
-    LOOP_PERIOD = 1.0 / LOOP_HZ
+    # ── Shared memory ────────────────────────────────────────────────────────
+    vic_r   = ShmReader(channels.VICON_STATE)
+    init_r  = ShmReader(channels.VICON_INIT_STATE)   # readable + writable for origin reset
+    joy_r   = ShmReader(channels.JOYSTICK_SP)
+    act_r   = ShmReader(channels.ACTUATION)
+    dist_r  = ShmReader(channels.DIST)
+    corner_r = ShmReader(channels.OBSTACLE_CORNERS)
+    hongi_r = ShmReader(channels.LOW_LEVEL_CTRL)
+    sp_w    = ShmWriter(channels.GENERAL_SETPOINT)   # coordinator owns the setpoint bus
+
+    # ── Services ─────────────────────────────────────────────────────────────
+    conn   = MavlinkConnection(_ADDRESS, _BAUDRATE)
+    conn.connect()
+    kb     = KeyboardHandler()
+    logger = FlightLogger()
+
+    running = True
+
+    def _stop(*_):
+        nonlocal running
+        running = False
+
+    signal.signal(signal.SIGTERM, _stop)
+    signal.signal(signal.SIGINT,  _stop)
+
+    # Reset all stateful trajectories on startup
+    for traj in REGISTRY.values():
+        traj.reset()
+
     next_time = time.perf_counter()
 
-    keyboard = QuickKeyboard(file="flight_log.h5")
-    keyboard.start()
-
-    mav = QuickMav(
-        address="udpout:192.168.0.3:14561",
-        baudrate=921600,
-        create=False
-    )
-    mav.sendHeartbeat()
-
-    shm_vic = shared_memory.SharedMemory(name="vicon_state")
-    shm_init_vic = shared_memory.SharedMemory(name="vicon_init_state")
-    shm_state_sp = shared_memory.SharedMemory(name="joeystick_state_setpoint")
-    shm_general_state_sp = shared_memory.SharedMemory(name="general_setpoint")
-    shm_actuation = shared_memory.SharedMemory(name="actuation")
-    shm_dist = shared_memory.SharedMemory(name="dist")
-    shm_corner = shared_memory.SharedMemory(name="obstacle_corners")
-    shm_hongi = shared_memory.SharedMemory(name="low_level_control")
-
-    vic_state = np.ndarray((num_obj,6), dtype=np.float64, buffer=shm_vic.buf)
-    vic_init_state = np.ndarray((num_obj,6), dtype=np.float64, buffer=shm_init_vic.buf)
-    state_sp = np.ndarray((4,), dtype=np.float64, buffer=shm_state_sp.buf)
-    general_state_sp = np.ndarray((6,), dtype=np.float64, buffer=shm_general_state_sp.buf)
-    actuation = np.ndarray((4,), dtype=np.float64, buffer=shm_actuation.buf)
-    dist = np.ndarray((1,), dtype=np.float64, buffer=shm_dist.buf)
-    corner = np.ndarray((num_obj, 4, 3), dtype=np.float64, buffer=shm_corner.buf)
-    hongi = np.ndarray((4,), dtype=np.float64, buffer=shm_corner.buf)
-
-    resource_tracker.unregister(shm_vic._name, "shared_memory")
-    resource_tracker.unregister(shm_init_vic._name, "shared_memory")
-    resource_tracker.unregister(shm_state_sp._name, "shared_memory")
-    resource_tracker.unregister(shm_general_state_sp._name, "shared_memory")
-    resource_tracker.unregister(shm_actuation._name, "shared_memory")
-    resource_tracker.unregister(shm_dist._name, "shared_memory")
-    resource_tracker.unregister(shm_corner._name, "shared_memory")
-    resource_tracker.unregister(shm_hongi._name, "shared_memory")
-
-    #dummies for testing
-    #vic_state = np.zeros((num_obj,6), dtype=np.float64)
-    #vic_init_state = np.zeros((num_obj,6), dtype=np.float64)
-    #state_sp = np.zeros((4,), dtype=np.float64)
-    #general_state_sp = np.zeros((6,), dtype=np.float64)
-    #actuation = np.zeros((4,), dtype=np.float64)
-    #dist = np.zeros((1,), dtype=np.float64)
-    #corner = np.zeros((num_obj, 4, 3), dtype=np.float64)
-    #hongi = np.zeros((4,), dtype=np.float64)
-
     try:
-        while not keyboard.quit_flag:
-            current_t = (time.monotonic_ns() // 1000) & 0xFFFFFFFF
+        while running and not kb.quit:
+            t_us = (time.monotonic_ns() // 1000) & 0xFFFFFFFF
+            pos  = tuple(vic_r.data[0, :3])
+            euler = tuple(vic_r.data[0, 3:6])
 
-            if not keyboard.pause_flag:
-                data = np.hstack(([current_t], vic_state[0].flatten()))
-                keyboard.log_vicon(data)
-                keyboard.log_obstacle(vic_state[1:])
-                keyboard.log_setpoint(general_state_sp)
-                keyboard.log_actuation(actuation)
-                keyboard.log_corner(corner[1:])
-                keyboard.log_distance(dist)
-
-                keyboard.writer.flush()
-
-            if keyboard.arm_flag:
-                mav.arm()
-                keyboard.arm_flag = False
-
-            if keyboard.kill_flag:
-                mav.disarm()
-                keyboard.kill_flag = False
-
-            if keyboard.force_kill_flag:
-                mav.forceDisarm()
-                keyboard.force_kill_flag = False
-
-            if keyboard.reboot_flag:
-                #mav.reboot() #disabled for now
-                keyboard.reboot_flag = False
-                vic_init_state[0][:3] = 0
+            # ── One-shot commands ─────────────────────────────────────────
+            cmd = kb.pop_command()
+            if cmd == "arm":
+                conn.arm()
+            elif cmd == "disarm":
+                conn.disarm()
+            elif cmd == "force_disarm":
+                conn.force_disarm()
+            elif cmd == "reboot":
+                init_r.data[0, :3] = 0
                 time.sleep(0.2)
-                vic_init_state[0][:3] = vic_state[0][:3]
+                init_r.data[0, :3] = vic_r.data[0, :3]
+            elif cmd == "activate":
+                conn.set_mode_active()
 
-            if keyboard.set_to_lift_flag:
-                mav.setTo_lift(current_t)
+            # ── Mode / setpoint dispatch ──────────────────────────────────
+            mode = kb.mode
+            if mode in REGISTRY:
+                sp = REGISTRY[mode].step(t_us, pos)
+                sp_w.data[:] = (sp.x, sp.y, sp.z, sp.vx, sp.vy, sp.vz)
+                conn.send_position_target(t_us, sp.x, sp.y, sp.z, sp.vx, sp.vy, sp.vz,
+                                          yaw=sp.yaw)
+            elif mode == "manual":
+                x, y, z, yaw = joy_r.data
+                sp_w.data[:3] = (x, y, z)
+                conn.send_position_target(t_us, x, y, z, yaw=yaw)
+            elif mode == "hongi":
+                conn.send_low_level_control(hongi_r.data)
 
-            if keyboard.set_to_land_flag:
-                mav.setTo_land(current_t)
+            # ── Always send odometry + lyapunov ──────────────────────────
+            conn.send_mocap_odometry(t_us, pos, euler)
+            conn.send_lyapunov_scalar(t_us, float(dist_r.data[0]))
 
-            if keyboard.set_to_active_flag:
-                mav.setTo_active()
-                keyboard.set_to_active_flag = False
+            # ── Logging ───────────────────────────────────────────────────
+            if not kb.paused:
+                logger.log("vicon",            np.r_[t_us, vic_r.data[0]])
+                logger.log("obstacle",         vic_r.data[1:4])
+                logger.log("setpoint",         sp_w.data.copy())
+                logger.log("actuation",        act_r.data.copy())
+                logger.log("corner",           corner_r.data[1:4])
+                logger.log("minimum_distance", dist_r.data.copy())
+                logger.flush()
 
-            if keyboard.traverse_square_flag:
-                mav.act_traverseSquare(current_t, (vic_state[0][0], vic_state[0][1], vic_state[0][2]))
-
-            if keyboard.traverse_eight_flag:
-                mav.act_traverseEight(current_t, (vic_state[0][0], vic_state[0][1], vic_state[0][2]))
-
-            if keyboard.traverse_bezier_flag:
-                mav.act_traverseBezier(current_t, (vic_state[0][0], vic_state[0][1], vic_state[0][2]))
-
-            if keyboard.manual_setpoint_flag:
-                mav.sendPositionYawTarget(current_t, state_sp[0], state_sp[1], state_sp[2], state_sp[3])
-
-            if keyboard.activate_hongi_flag:
-                mav.sendSwitchControl(hongi)
-
-            mav.sendOdometry(
-                    current_t,
-                    (vic_state[0][0], vic_state[0][1], vic_state[0][2]),
-                    (vic_state[0][3], vic_state[0][4], vic_state[0][5])
-                    )
-
-            mav.sendLyapunovScalar(current_t, dist)
-
-            next_time += LOOP_PERIOD
-            sleep_time = next_time - time.perf_counter()
-            if sleep_time > 0:
-                time.sleep(sleep_time)
+            # ── Rate limit ────────────────────────────────────────────────
+            next_time += _LOOP_PERIOD
+            sleep = next_time - time.perf_counter()
+            if sleep > 0:
+                time.sleep(sleep)
             else:
                 next_time = time.perf_counter()
 
-    except KeyboardInterrupt:
-        print("Interrupted by user")
-        keyboard.writer.close()
-        mav.master.close()
-        shm_vic.close()
-        time.sleep(2)
-
     finally:
-        print("Shutting down...")
-        keyboard.writer.close()
-        mav.master.close()
-        shm_vic.close()
-        time.sleep(2)
+        logger.close()
+        conn.close()
+        vic_r.close(); init_r.close(); joy_r.close()
+        act_r.close(); dist_r.close(); corner_r.close()
+        hongi_r.close(); sp_w.close()
+        print("[coordinator] shutdown")
 
 
 if __name__ == "__main__":

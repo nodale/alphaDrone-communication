@@ -1,40 +1,58 @@
-import time
-import traceback
+import gc
+import signal
 
-from mavlink.quick_mavlink import QuickMav
+from shm.bus import ShmWriter
+from shm import channels
+from mavlink.connection import MavlinkConnection
+
+# Message IDs and their requested stream intervals (microseconds)
+MSG_INTERVALS = {
+    44001: 200,   # JOHNNY_STATUS  (custom — actuation feedback)
+    331:   200,   # ODOMETRY       (estimated state from EKF2)
+    85:     80,   # POSITION_TARGET_LOCAL_NED
+}
 
 
 def main():
-    mav = QuickMav(
-        address="/dev/ttyTHS1",
-        baudrate=921600,
-        create=True
-    )
+    gc.collect()
+    gc.disable()
 
+    state_w = ShmWriter(channels.ESTIMATED_STATE)
+    act_w   = ShmWriter(channels.ACTUATION)
 
-    mav.sendHeartbeat()
+    conn = MavlinkConnection(address="/dev/ttyTHS1", baudrate=921600)
+    conn.connect(msg_intervals=MSG_INTERVALS)
 
-    while True:
-        try:
-            msg_odo = mav.getOdometry()
-            msg_act = mav.getJohnny()
+    running = True
+    def _stop(sig, frame):
+        nonlocal running
+        running = False
+    signal.signal(signal.SIGTERM, _stop)
+    signal.signal(signal.SIGINT, _stop)
 
-            if msg_odo is not None:
-                mav.publish_odometry("estimated_state")
+    try:
+        while running:
+            msg = conn.recv()
+            if msg is None:
+                continue
 
-            if msg_act is not None:
-                #print(msg_act)
-                mav.publish_actuation("actuation")
+            t = msg.get_type()
 
-            #print("states : ", mav.shared_state.copy())
+            if t == "ODOMETRY":
+                state_w.data[:] = [
+                    msg.x,  msg.y,  msg.z,
+                    msg.vx, msg.vy, msg.vz,
+                    *msg.q,
+                    msg.rollspeed, msg.pitchspeed, msg.yawspeed,
+                ]
 
-        except Exception as e:
-            print("Error in main loop:", e)
-            mav.shm.close()
-            mav.shm.unlink()
-            mav.shm_general_sp.close()
-            mav.shm_general_sp.unlink()
-            traceback.print_exc()
+            elif t == "JOHNNY_STATUS":
+                act_w.data[:] = msg.actuation
+
+    finally:
+        conn.close()
+        state_w.close()
+        act_w.close()
 
 
 if __name__ == "__main__":

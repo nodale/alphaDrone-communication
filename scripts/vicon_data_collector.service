@@ -9,10 +9,17 @@ User=me
 WorkingDirectory=/home/me/drone/alphaDrone-communication/alpha
 ExecStart=/home/me/drone/mavenv/bin/python /home/me/drone/alphaDrone-communication/alpha/vicon/vicon_collector.py
 Restart=always
-RestartSec=5
+RestartSec=1
 StandardOutput=journal
 StandardError=journal
 Environment="PATH=/home/me/drone/mavenv/bin:/usr/bin:/bin"
+
+# Soft real-time settings
+CPUSchedulingPolicy=fifo
+CPUSchedulingPriority=50
+CPUAffinity=1
+LimitMEMLOCK=infinity
+OOMScoreAdjust=-500
 
 [Install]
 WantedBy=multi-user.target

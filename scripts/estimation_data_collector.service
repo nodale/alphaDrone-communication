@@ -1,6 +1,6 @@
 
 [Unit]
-Description=Collects data from PixHawk
+Description=Collects state estimates from PixHawk via MAVLink
 After=setpoint_data_collector.service
 
 [Service]
@@ -9,10 +9,17 @@ User=me
 WorkingDirectory=/home/me/drone/alphaDrone-communication/alpha
 ExecStart=/home/me/drone/mavenv/bin/python /home/me/drone/alphaDrone-communication/alpha/mavlink/estimator_collector.py
 Restart=always
-RestartSec=5
+RestartSec=1
 StandardOutput=append:/home/me/drone/estimation.log
 StandardError=append:/home/me/drone/estimation.log
 Environment="PATH=/home/me/drone/mavenv/bin:/usr/bin:/bin"
+
+# Soft real-time settings
+CPUSchedulingPolicy=fifo
+CPUSchedulingPriority=60
+CPUAffinity=2
+LimitMEMLOCK=infinity
+OOMScoreAdjust=-500
 
 [Install]
 WantedBy=multi-user.target
