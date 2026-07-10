@@ -2,7 +2,7 @@ import time
 import traceback
 import numpy as np
 
-from include.quick_viser import QuickViser
+from viz.quick_viser import QuickViser
 
 ##################### PARAM #######################
 
@@ -24,7 +24,7 @@ def reform(state):
 
     sinp = 2.0 * (qw * qy - qz * qx)
     if abs(sinp) >= 1:
-        pitch = np.sign(sinp) * np.pi / 2 
+        pitch = np.sign(sinp) * np.pi / 2
     else:
         pitch = np.arcsin(sinp)
 
@@ -64,7 +64,7 @@ def main():
             )
             vis.update_status(status_msg)
 
-            time.sleep(0.005) 
+            time.sleep(0.005)
 
         except Exception as e:
             vis.shm_est.close()

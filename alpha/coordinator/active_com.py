@@ -5,11 +5,11 @@ import time
 import numpy as np
 
 from multiprocessing import shared_memory, resource_tracker
-from include.quick_keyboard import QuickKeyboard
-from include.quick_mavlink import QuickMav
-from include.quick_vicon import QuickVicon
-from include.quick_viser import QuickViser
-from include.quick_hongi import QuickHongi
+from joystick.quick_keyboard import QuickKeyboard
+from mavlink.quick_mavlink import QuickMav
+from vicon.quick_vicon import QuickVicon
+from viz.quick_viser import QuickViser
+from control.quick_hongi import QuickHongi
 
 def main():
     num_obj = 4
@@ -22,7 +22,7 @@ def main():
     keyboard.start()
 
     mav = QuickMav(
-        address="udpout:192.168.0.3:14561",   
+        address="udpout:192.168.0.3:14561",
         baudrate=921600,
         create=False
     )
@@ -97,7 +97,7 @@ def main():
                 keyboard.reboot_flag = False
                 vic_init_state[0][:3] = 0
                 time.sleep(0.2)
-                vic_init_state[0][:3] = vic_state[0][:3]  
+                vic_init_state[0][:3] = vic_state[0][:3]
 
             if keyboard.set_to_lift_flag:
                 mav.setTo_lift(current_t)
@@ -156,4 +156,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

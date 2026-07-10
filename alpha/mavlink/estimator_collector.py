@@ -1,7 +1,7 @@
 import time
 import traceback
 
-from include.quick_mavlink import QuickMav
+from mavlink.quick_mavlink import QuickMav
 
 
 def main():

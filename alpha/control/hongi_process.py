@@ -5,7 +5,7 @@ import numpy as np
 import torch
 
 from multiprocessing import shared_memory
-from include.quick_hongi import QuickHongi
+from control.quick_hongi import QuickHongi
 
 
 def _q2e(q):

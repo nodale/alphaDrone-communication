@@ -5,7 +5,7 @@ import sys
 parent_dir = Path(__file__).resolve().parents[1]
 sys.path.append(str(parent_dir))
 
-from include.quick_hongi import QuickHongi
+from control.quick_hongi import QuickHongi
 
 controller = QuickHongi()
 

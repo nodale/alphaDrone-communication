@@ -4,7 +4,7 @@ from pymavlink import mavutil
 from pymavlink.dialects.v20 import common as mavlink2
 from multiprocessing import shared_memory, resource_tracker
 
-from include.quick_bestzier import QuickBestzier
+from mavlink.quick_bestzier import QuickBestzier
 
 import numpy as np
 

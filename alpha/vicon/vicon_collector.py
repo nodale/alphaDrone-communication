@@ -2,7 +2,7 @@ import time
 import traceback
 
 from multiprocessing import shared_memory
-from include.quick_vicon import QuickVicon   
+from vicon.quick_vicon import QuickVicon
 
 def main():
     vicon = QuickVicon(
@@ -17,7 +17,7 @@ def main():
 
             #print("Received state:", vicon.shared_state.copy())
 
-        except Exception as e:        
+        except Exception as e:
             print("Error in main loop:", e)
             #vicon.sock.close()
             vicon.shm.close()

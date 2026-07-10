@@ -1,5 +1,5 @@
 import numpy as np
-from include.tra_spline import CubicSpline
+from mavlink.tra_spline import CubicSpline
 from typing import List
 
 controller_target = {
@@ -73,7 +73,7 @@ class LinearLocalPlanner:
             #print(grad.item())
             if np.isnan(grad).any():
                 break
-            
+
             u = u - grad.item()
             if (np.abs(grad) < conv_threshold).any():
                 break
@@ -85,7 +85,7 @@ class LinearLocalPlanner:
         else:
             u = self.current_u
         if self.current_u > 1:
-            u = 0.0  
+            u = 0.0
             self.transition()
 
 
