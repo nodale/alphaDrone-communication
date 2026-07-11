@@ -135,7 +135,7 @@ def test_online_training_step():
 
     input_len  = mcfg["input_len"]
     output_len = mcfg["output_len"]
-    window     = input_len + output_len
+    window     = input_len + output_len + input_len
     pred_dim   = mcfg["models"]["out_dim"]
     mode       = cfg.get("training_mode", "rollout")
 
@@ -151,7 +151,7 @@ def test_online_training_step():
                                   window_size=window)
         loader    = DataLoader(dataset, batch_size=cfg.get("batch_size", 4), num_workers=0)
         optimizer = torch.optim.AdamW(model.parameters(),
-                                      lr=cfg.get("lr", 1e-4),
+                                      lr=mcfg["training"]["lr"],
                                       weight_decay=cfg.get("weight_decay", 0.0))
 
         _dispatch_train(mode, loader, model, optimizer, cfg, pred_dim, device)
@@ -182,7 +182,7 @@ def test_online_learner_loop():
     input_len  = mcfg["input_len"]
     output_len = mcfg["output_len"]
     pred_dim   = mcfg["models"]["out_dim"]
-    window     = input_len + output_len
+    window     = input_len + output_len + input_len
     mode       = cfg.get("training_mode", "rollout")
     n_cycles   = cfg.get("p_cycles", 2)
 
@@ -203,7 +203,7 @@ def test_online_learner_loop():
         for cycle in range(n_cycles):
             challenger = copy.deepcopy(model)
             optimizer  = torch.optim.AdamW(challenger.parameters(),
-                                           lr=cfg.get("lr", 1e-4),
+                                           lr=mcfg["training"]["lr"],
                                            weight_decay=cfg.get("weight_decay", 0.0))
 
             dataset = QuickDataset2(path=str(zarr_path),
@@ -227,7 +227,7 @@ def test_online_learner_loop():
 
 if __name__ == "__main__":
     test_data_conversion()
-    test_inference_from_log()
-    test_online_training_step()
+    #test_inference_from_log()
+    #test_online_training_step()
     test_online_learner_loop()
     print("\nAll tests passed.")
