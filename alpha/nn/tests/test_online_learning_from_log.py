@@ -1,14 +1,13 @@
 """
-Simulate online learning from a past HDF5 flight log.
+Simulate online learning from a pre-converted .pt flight log tensor.
 No SHM, no coordinator, no running services required.
 
 Usage (from alpha/):
-    python nn/tests/test_online_learning_from_log.py <flight_log.h5>
+    python nn/tests/test_online_learning_from_log.py <flight_log.pt>
 
-HDF5 fields used:
-  vicon[:,1:4]   — position x,y,z  (quat/angvel not in log → left as zero)
-  actuation[:]   — motor commands (4,)
-  setpoint[:,0:3] — target position x,y,z
+The .pt file must be a (T, 23) float32 tensor in the same normalised layout
+the model was trained on (pos/3, lin_vel/0.8, quat_frd, ang_vel/0.5,
+acc/25, thrust/9.81, setpoint/3). Produce one with Thesis-NN/data/converter.py.
 
 Model path: set MODEL_RUN_DIR below, or in nn/config/inferrer.yaml (model_run_dir key).
 """
@@ -17,7 +16,6 @@ import sys
 import tempfile
 from pathlib import Path
 
-import h5py
 import numpy as np
 import torch
 import zarr
@@ -37,26 +35,6 @@ MODEL_RUN_DIR = Path("/home/nodale/Thesis/Thesis-NN/latest_model/09-22-02/0")
 
 _N_DIM = 23
 
-# ── Data helpers ──────────────────────────────────────────────────────────────
-
-def log_to_tensor(h5_path: Path) -> torch.Tensor:
-    """HDF5 flight log → (T, 23) normalised float32 tensor."""
-    with h5py.File(h5_path, "r") as f:
-        pos = f["vicon"][:, 1:4].astype(np.float32)
-        act = f["actuation"][:].astype(np.float32)
-        sp  = f["setpoint"][:, :3].astype(np.float32)
-
-    T   = min(len(pos), len(act), len(sp))
-    vel = np.gradient(pos[:T], axis=0)
-
-    feat = np.zeros((T, _N_DIM), np.float32)
-    feat[:, 0:3]  = pos[:T] / 3.0
-    feat[:, 3:6]  = vel     / 0.8
-    # [6:16] quat + angvel — not available in log, left as zero
-    feat[:, 16:20] = act[:T] / 9.81
-    feat[:, 20:23] = sp[:T]  / 3.0
-    return torch.from_numpy(feat)
-
 
 def _save_as_episodes(tensor: torch.Tensor, zarr_path: Path, episode_len: int):
     """Chop tensor into episodes in the CollectorThread zarr format."""
@@ -70,13 +48,13 @@ def _save_as_episodes(tensor: torch.Tensor, zarr_path: Path, episode_len: int):
 
 # ── Tests ─────────────────────────────────────────────────────────────────────
 
-def test_data_conversion(h5_path: Path):
-    tensor = log_to_tensor(h5_path)
+def test_data_conversion(pt_path: Path):
+    tensor = torch.load(pt_path)
     assert tensor.ndim == 2 and tensor.shape[1] == _N_DIM, f"bad shape {tensor.shape}"
-    print(f"[OK] data conversion: {tensor.shape}")
+    print(f"[OK] data loaded: {tensor.shape}")
 
 
-def test_inference_from_log(h5_path: Path):
+def test_inference_from_log(pt_path: Path):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     mcfg   = _load_hydra_cfg(MODEL_RUN_DIR)
     model  = _build_model(mcfg)
@@ -88,7 +66,7 @@ def test_inference_from_log(h5_path: Path):
     input_len  = mcfg["input_len"]
     output_len = mcfg["output_len"]
 
-    tensor  = log_to_tensor(h5_path)
+    tensor  = torch.load(pt_path)
     dataset = FlightLog(data=tensor, window_size=input_len + output_len)
     loader  = DataLoader(dataset, batch_size=None, num_workers=0)
 
@@ -99,7 +77,7 @@ def test_inference_from_log(h5_path: Path):
     print(f"[OK] inference: {window.shape} → {out.shape}")
 
 
-def test_online_training_step(h5_path: Path):
+def test_online_training_step(pt_path: Path):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     mcfg   = _load_hydra_cfg(MODEL_RUN_DIR)
     model  = _build_model(mcfg)
@@ -112,7 +90,7 @@ def test_online_training_step(h5_path: Path):
     output_len = mcfg["output_len"]
     window     = input_len + output_len
 
-    tensor = log_to_tensor(h5_path)
+    tensor = torch.load(pt_path)
 
     with tempfile.TemporaryDirectory() as tmp:
         zarr_path  = Path(tmp) / "online.zarr"
@@ -134,7 +112,7 @@ def test_online_training_step(h5_path: Path):
     print(f"[OK] training step: loss={loss.item():.4f}")
 
 
-def test_online_learner_loop(h5_path: Path, n_cycles: int = 2, train_steps: int = 20):
+def test_online_learner_loop(pt_path: Path, n_cycles: int = 2, train_steps: int = 20):
     """Simulate online_learner.main(): n_cycles of train → eval (ATE) → swap-if-better.
 
     Replaces SHM/CollectorThread with log data; no coordinator required.
@@ -157,7 +135,7 @@ def test_online_learner_loop(h5_path: Path, n_cycles: int = 2, train_steps: int 
     out_dim   = mcfg["models"]["out_dim"]
     window    = input_len + output_len
 
-    tensor = log_to_tensor(h5_path)
+    tensor = torch.load(pt_path)
 
     def _ate(m, zarr_path, ep_idx=0):
         m.eval()
@@ -201,12 +179,12 @@ def test_online_learner_loop(h5_path: Path, n_cycles: int = 2, train_steps: int 
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: python nn/tests/test_online_learning_from_log.py <flight_log.h5>")
+        print("Usage: python nn/tests/test_online_learning_from_log.py <flight_log.pt>")
         sys.exit(1)
 
-    h5_path = Path(sys.argv[1])
-    test_data_conversion(h5_path)
-    test_inference_from_log(h5_path)
-    test_online_training_step(h5_path)
-    test_online_learner_loop(h5_path)
+    pt_path = Path(sys.argv[1])
+    test_data_conversion(pt_path)
+    test_inference_from_log(pt_path)
+    test_online_training_step(pt_path)
+    test_online_learner_loop(pt_path)
     print("\nAll tests passed.")
