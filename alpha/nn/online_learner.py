@@ -420,6 +420,16 @@ def main(cfg: DictConfig):
     mode = cfg.training_mode
     gen  = torch.Generator(device="cuda").manual_seed(cfg.seed)
 
+    # Challenger persists across rejections — only reset after a swap.
+    # This lets a rejected challenger keep adapting on new data rather than
+    # reverting to the champion's weights each cycle.
+    challenger = _make_model(mcfg, mode, dev)
+    challenger.load_state_dict(_state_dict(infer_thread.model))
+    optimizer = torch.optim.AdamW(
+        challenger.parameters(), lr=cfg.lr,
+        weight_decay=cfg.weight_decay, eps=1e-12,
+    )
+
     for cycle in range(cfg.p_cycles):
         if not running:
             break
@@ -434,13 +444,6 @@ def main(cfg: DictConfig):
         print(f"\n[nn.learner] ===== Cycle {cycle}/{cfg.p_cycles} "
               f"(sched={_sched_prob(cycle, cfg.p_cycles, cfg.max_schedule_prob):.3f}) =====")
 
-        # Build challenger from current inference model
-        challenger = _make_model(mcfg, mode, dev)
-        challenger.load_state_dict(_state_dict(infer_thread.model))
-        optimizer = torch.optim.AdamW(
-            challenger.parameters(), lr=cfg.lr,
-            weight_decay=cfg.weight_decay, eps=1e-12,
-        )
 
         # Train
         window = mcfg["input_len"] + mcfg["output_len"] + cfg.rollout_steps
@@ -479,8 +482,15 @@ def main(cfg: DictConfig):
             _save_ckpt(challenger, ckpt)
             infer_thread.swap(challenger)   # GIL-atomic reference swap
             print(f"[nn.learner] new gen wins → swapped. Saved: {ckpt}")
+            # Fresh challenger branching from the new champion
+            challenger = _make_model(mcfg, mode, dev)
+            challenger.load_state_dict(_state_dict(infer_thread.model))
+            optimizer = torch.optim.AdamW(
+                challenger.parameters(), lr=cfg.lr,
+                weight_decay=cfg.weight_decay, eps=1e-12,
+            )
         else:
-            print(f"[nn.learner] current gen retained.")
+            print(f"[nn.learner] current gen retained — challenger continues.")
 
     # Shutdown
     infer_thread.stop_event.set()

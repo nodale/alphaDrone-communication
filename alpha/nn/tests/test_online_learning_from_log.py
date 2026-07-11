@@ -93,20 +93,29 @@ def test_inference_from_log():
     print(f"[OK] deployment sim: {T} steps → {len(predictions)} predictions, ATE={ate:.4f} m")
 
 
-def _dispatch_train(mode, loader, model, optimizer, cfg, pred_dim, device):
-    """Call the appropriate trainer.py training function for the given mode."""
+def _dispatch_train(mode, loader, model, optimizer, cfg, pred_dim, device, gen,
+                    rollout_steps=16, cycle=0, n_cycles=1):
+    """Call the appropriate trainer.py training function for the given mode.
+
+    gen           — persistent torch.Generator; caller owns it and lets it advance
+    rollout_steps — from mcfg["training"]["rollout_steps"]
+    cycle         — current cycle index (0-based), used for schedule-prob ramp
+    n_cycles      — total cycles, used for schedule-prob ramp
+    """
     from train.trainer import (
         train_loop, train_rollout_loop, train_rollout_horizon_loop,
         train_gml_loop, train_gml_rollout_loop,
     )
+    from nn.online_learner import _sched_prob
+
     kw = dict(batch_size=cfg.get("batch_size", 4), pred_dim=pred_dim)
     if mode == "standard":
         train_loop(loader, model, optimizer, **kw)
     elif mode in ("rollout", "rollout_horz", "gml_rollout"):
-        gen = torch.Generator(device=device).manual_seed(cfg.get("seed", 0))
+        sched = _sched_prob(cycle, n_cycles, cfg.get("max_schedule_prob", 0.0))
         rollout_kw = dict(
-            rollout_max_steps=cfg.get("rollout_steps", 16),
-            schedule_prob=cfg.get("max_schedule_prob", 0.0),
+            rollout_max_steps=rollout_steps,
+            schedule_prob=sched,
             **kw,
         )
         if mode == "rollout":
@@ -135,11 +144,12 @@ def test_online_training_step():
 
     input_len  = mcfg["input_len"]
     output_len = mcfg["output_len"]
-    window     = input_len + output_len + input_len
     pred_dim   = mcfg["models"]["out_dim"]
     mode       = cfg.get("training_mode", "rollout")
+    window     = input_len + output_len + mcfg["training"]["rollout_steps"]
 
     tensor = torch.load(cfg["flight_log_pt"])
+    gen    = torch.Generator(device=device).manual_seed(cfg.get("seed", 0))
 
     with tempfile.TemporaryDirectory() as tmp:
         zarr_path  = Path(tmp) / "online.zarr"
@@ -154,7 +164,8 @@ def test_online_training_step():
                                       lr=mcfg["training"]["lr"],
                                       weight_decay=cfg.get("weight_decay", 0.0))
 
-        _dispatch_train(mode, loader, model, optimizer, cfg, pred_dim, device)
+        _dispatch_train(mode, loader, model, optimizer, cfg, pred_dim, device, gen,
+                        rollout_steps=mcfg["training"]["rollout_steps"])
 
     print(f"[OK] training step ({mode})")
 
@@ -186,12 +197,13 @@ def test_online_learner_loop():
     input_len    = mcfg["input_len"]
     output_len   = mcfg["output_len"]
     pred_dim     = mcfg["models"]["out_dim"]
-    window       = input_len * 2 + output_len
     mode         = cfg.get("training_mode", "rollout")
     n_cycles     = cfg.get("p_cycles", 2)
     window_width = cfg.get("window_width", 2)  # segments kept in the sliding window
+    window       = input_len + output_len + mcfg["training"]["rollout_steps"]
 
     tensor  = torch.load(cfg["flight_log_pt"])
+    gen     = torch.Generator(device=device).manual_seed(cfg.get("seed", 0))
     # Divide the log so the window can slide n_cycles times
     n_segs  = n_cycles + window_width - 1
     seg_len = len(tensor) // n_segs
@@ -232,7 +244,9 @@ def test_online_learner_loop():
                                     window_size=window,
                                     seed=cfg.get("seed", 0) + cycle)
             loader  = DataLoader(dataset, batch_size=cfg.get("batch_size", 4), num_workers=0)
-            _dispatch_train(mode, loader, challenger, optimizer, cfg, pred_dim, device)
+            _dispatch_train(mode, loader, challenger, optimizer, cfg, pred_dim, device, gen,
+                            rollout_steps=mcfg["training"]["rollout_steps"],
+                            cycle=cycle, n_cycles=n_cycles)
 
             cur_ate = _ate(model,      zarr_path)
             new_ate = _ate(challenger, zarr_path)
