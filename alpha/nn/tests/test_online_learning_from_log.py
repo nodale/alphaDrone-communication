@@ -20,22 +20,24 @@ import yaml
 import zarr
 from torch.utils.data import DataLoader
 
-_ALPHA     = Path(__file__).parent.parent.parent
-_THESIS_NN = _ALPHA.parent.parent / "Thesis-NN"
-sys.path.insert(0, str(_THESIS_NN))
-sys.path.insert(0, str("/home/egghead/Thesis/Thesis-NN"))
-
-from data.dataset import FlightLog, QuickDataset2
-from deploy.estimator import (
-    _load_hydra_cfg, _find_checkpoint, _build_model, _strip_compile_prefix,
-)
-
-# ── Config ────────────────────────────────────────────────────────────────────
+# ── Bootstrap: load config early to resolve Thesis-NN path portably ──────────
 _CONFIG_PATH = Path(__file__).parent.parent / "config" / "online_learner.yaml"
 
 def _load_cfg() -> dict:
     with open(_CONFIG_PATH) as f:
         return yaml.safe_load(f)
+
+# model_run_dir is <thesis_nn>/latest_model/<date>/<run> — 3 levels deep
+_THESIS_NN = Path(_load_cfg()["model_run_dir"]).parents[2]
+sys.path.insert(0, str(_THESIS_NN))
+
+from data.dataset import FlightLog, QuickDataset2
+from data.denormaliser import denormalise
+from deploy.estimator import (
+    QuickEstimator,
+    _load_hydra_cfg, _find_checkpoint, _build_model, _strip_compile_prefix,
+)
+from evaluate.metrics import metric_ate
 
 _N_DIM = 23
 
@@ -60,28 +62,35 @@ def test_data_conversion():
 
 
 def test_inference_from_log():
-    cfg    = _load_cfg()
-    run    = Path(cfg["model_run_dir"])
-    device = torch.device(cfg.get("device", "cpu"))
-    mcfg   = _load_hydra_cfg(run)
-    model  = _build_model(mcfg)
-    model.load_state_dict(
-        _strip_compile_prefix(torch.load(_find_checkpoint(run), map_location=device))
-    )
-    model.to(device).eval()
+    """Simulate deployment: feed .pt log observations tick-by-tick through
+    QuickEstimator.step(), mirroring the per-control-tick call in DroneEnv.
+    The estimator overwrites pos/vel channels with its own running prediction
+    (not ground truth), exactly as in real flight.
+    """
+    cfg      = _load_cfg()
+    run      = Path(cfg["model_run_dir"])
+    device   = torch.device(cfg.get("device", "cpu"))
+    mcfg     = _load_hydra_cfg(run)
+    pred_dim = mcfg["models"]["out_dim"]
 
-    input_len  = mcfg["input_len"]
-    output_len = mcfg["output_len"]
+    estimator = QuickEstimator.from_run(run_dir=run, num_envs=1, device=device, pred_dim=pred_dim)
 
-    tensor  = torch.load(cfg["flight_log_pt"])
-    dataset = FlightLog(data=tensor, window_size=input_len + output_len)
-    loader  = DataLoader(dataset, batch_size=None, num_workers=0)
+    tensor = torch.load(cfg["flight_log_pt"])  # (T, 23) normalised
+    T = len(tensor)
 
-    with torch.inference_mode():
-        window = next(iter(loader)).to(device)         # (input_len+output_len, 23)
-        out    = model(window[:input_len].unsqueeze(0))  # (1, output_len, out_dim)
+    predictions, ground_truth = [], []
+    for t in range(T):
+        obs = tensor[t].unsqueeze(0).to(device)  # (1, 23)
+        est = estimator.step(obs)                # None until history fills
+        if est is not None:
+            predictions.append(est.cpu())                                       # denormalised
+            ground_truth.append(denormalise(tensor[t, :pred_dim].unsqueeze(0)))
 
-    print(f"[OK] inference: {window.shape} → {out.shape}")
+    assert predictions, "no predictions produced — log too short to fill history"
+    pred  = torch.cat(predictions)   # (N, pred_dim)
+    truth = torch.cat(ground_truth)  # (N, pred_dim)
+    ate   = metric_ate(pred, truth)
+    print(f"[OK] deployment sim: {T} steps → {len(predictions)} predictions, ATE={ate:.4f} m")
 
 
 def test_online_training_step():
