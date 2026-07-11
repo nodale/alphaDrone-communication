@@ -42,6 +42,9 @@ KEYMAP: dict[str, Key] = {
     'z': Key("bezier trajectory", action="bezier",       kind="mode"),
     'x': Key("manual setpoint",   action="manual",       kind="mode"),
     'h': Key("hongi control",     action="hongi",        kind="mode"),
+    # Neural-network process control
+    'i': Key("toggle NN inferrer",    action="nn_infer_toggle", kind="command"),
+    'u': Key("toggle NN learner",     action="nn_learn_toggle", kind="command"),
 }
 
 # ────────────────────────────────────────────────────────────────────────────

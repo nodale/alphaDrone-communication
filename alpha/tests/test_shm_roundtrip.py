@@ -16,6 +16,7 @@ _ALL_CHANNELS = [
     channels.LOW_LEVEL_CTRL,
     channels.DIST,
     channels.JOYSTICK_SP,
+    channels.NN_CTRL,
 ]
 
 

@@ -30,6 +30,7 @@ def main():
     corner_r = ShmReader(channels.OBSTACLE_CORNERS)
     hongi_r = ShmReader(channels.LOW_LEVEL_CTRL)
     sp_w    = ShmWriter(channels.GENERAL_SETPOINT)   # coordinator owns the setpoint bus
+    nn_w    = ShmWriter(channels.NN_CTRL)             # coordinator owns NN enable flags
 
     # ── Services ─────────────────────────────────────────────────────────────
     conn   = MavlinkConnection(_ADDRESS, _BAUDRATE)
@@ -72,6 +73,14 @@ def main():
                 init_r.data[0, :3] = vic_r.data[0, :3]
             elif cmd == "activate":
                 conn.set_mode_active()
+            elif cmd == "nn_infer_toggle":
+                enabled = not bool(nn_w.data[0])
+                nn_w.data[:] = (1 if enabled else 0, 0)   # mutually exclusive with learner
+                print(f"[nn] inferrer {'ON' if enabled else 'OFF'}")
+            elif cmd == "nn_learn_toggle":
+                enabled = not bool(nn_w.data[1])
+                nn_w.data[:] = (0, 1 if enabled else 0)   # mutually exclusive with inferrer
+                print(f"[nn] online learner {'ON' if enabled else 'OFF'}")
 
             # ── Mode / setpoint dispatch ──────────────────────────────────
             mode = kb.mode
@@ -82,7 +91,7 @@ def main():
                                           yaw=sp.yaw)
             elif mode == "manual":
                 x, y, z, yaw = joy_r.data
-                sp_w.data[:3] = (x, y, z)
+                sp_w.data[:] = (x, y, z, 0.0, 0.0, 0.0)
                 conn.send_position_target(t_us, x, y, z, yaw=yaw)
             elif mode == "hongi":
                 conn.send_low_level_control(hongi_r.data)
@@ -114,7 +123,7 @@ def main():
         conn.close()
         vic_r.close(); init_r.close(); joy_r.close()
         act_r.close(); dist_r.close(); corner_r.close()
-        hongi_r.close(); sp_w.close()
+        hongi_r.close(); sp_w.close(); nn_w.close()
         print("[coordinator] shutdown")
 
 

@@ -1,0 +1,18 @@
+
+[Unit]
+Description=Neural network inferrer (reads SHM, logs to zarr)
+After=estimation_data_collector.service vicon_data_collector.service setpoint_data_collector.service
+
+[Service]
+Type=simple
+User=me
+WorkingDirectory=/home/me/drone/alphaDrone-communication/alpha
+ExecStart=/home/me/drone/mavenv/bin/python -m nn.inferrer
+Restart=always
+RestartSec=5
+StandardOutput=append:/home/me/drone/nn_inferrer.log
+StandardError=append:/home/me/drone/nn_inferrer.log
+Environment="PATH=/home/me/drone/mavenv/bin:/usr/bin:/bin"
+
+[Install]
+WantedBy=multi-user.target

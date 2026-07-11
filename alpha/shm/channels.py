@@ -27,3 +27,6 @@ DIST             = Channel("dist",                     shape=(1,),      dtype=np
 
 # Joystick input
 JOYSTICK_SP      = Channel("joeystick_state_setpoint", shape=(4,),      dtype=np.float64)
+
+# Neural-network process control  [0]=inferrer_enable  [1]=learner_enable
+NN_CTRL          = Channel("nn_ctrl",                  shape=(2,),      dtype=np.float64)

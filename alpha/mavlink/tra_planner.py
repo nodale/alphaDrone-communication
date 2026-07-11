@@ -48,7 +48,7 @@ class LinearLocalPlanner:
                 u_new = u + adjustment_value
                 #self.consecutive_iterations = 0
         self.last_u = u_new
-        return u
+        return u_new
 
     def update_position(self, pos):
         self.current_position = pos
@@ -85,6 +85,7 @@ class LinearLocalPlanner:
         else:
             u = self.current_u
         if self.current_u > 1:
+            self.current_u = 0.0
             u = 0.0
             self.transition()
 

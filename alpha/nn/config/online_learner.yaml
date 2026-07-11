@@ -1,0 +1,44 @@
+# nn/online_learner.py config
+
+# ── Model source ────────────────────────────────────────────────────────────
+# Initial (generation-0) Hydra run dir — must contain .hydra/config.yaml + *.pth
+model_run_dir: /home/nodale/Thesis/Thesis-NN/latest_model/09-22-02/0
+
+# ── Output paths ────────────────────────────────────────────────────────────
+gen_dir:      /home/nodale/Thesis/output/generations      # per-cycle checkpoints
+infer_zarr:   /home/nodale/Thesis/output/infer_log.zarr   # inference thread log
+online_zarr:  /home/nodale/Thesis/output/online_data.zarr # vicon-supervised episodes
+
+# Simulation dataset for evaluation (same zarr format as Thesis-NN training data)
+sim_dataset_path: /home/nodale/Thesis/Thesis-NN/latest_model/09-22-02/data.zarr
+
+# ── Generational schedule ───────────────────────────────────────────────────
+p_cycles: 20          # total train-eval-swap cycles
+m_train_steps: 50000  # online training samples per cycle (QuickDataset2 training_size)
+rollout_steps: 16     # rollout horizon (rollout / gml_rollout modes)
+n_eval_traj: 5        # trajectories from sim AND online each (equal split)
+
+# ── Training ────────────────────────────────────────────────────────────────
+# standard | rollout | rollout_horz | gml_rollout
+# Must be compatible with the loaded checkpoint's out_dim.
+# (gml_rollout doubles out_dim — use only if base model was trained that way.)
+training_mode: rollout
+
+batch_size: 64
+lr: 2e-4
+weight_decay: 0.1
+seed: 42
+
+# Scheduled sampling ceiling — ramped 0→this via sigmoid over p_cycles
+max_schedule_prob: 0.3
+
+# ── Data collection ─────────────────────────────────────────────────────────
+episode_len: 1000        # frames per vicon-supervised episode (~10 s at 100 Hz)
+collect_hz: 100          # data collection rate (Hz)
+min_online_episodes: 5   # cycles block here until this many episodes exist
+
+# ── Inference thread ────────────────────────────────────────────────────────
+loop_hz: 100
+flush_every: 100
+
+device: cuda

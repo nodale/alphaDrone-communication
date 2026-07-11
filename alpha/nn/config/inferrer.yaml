@@ -1,0 +1,16 @@
+# nn/inferrer.py config
+
+# Path to a Hydra run dir produced by Thesis-NN/train/trainer.py.
+# Must contain .hydra/config.yaml and a *.pth checkpoint.
+model_run_dir: /home/nodale/Thesis/Thesis-NN/latest_model/09-22-02/0
+
+# Where to write inference observations + model outputs
+zarr_output: /home/nodale/Thesis/output/inferrer.zarr
+
+# Inference loop rate (Hz) — match your control loop
+loop_hz: 100
+
+# Flush to zarr every N inferences (amortise write cost)
+flush_every: 100
+
+device: cuda

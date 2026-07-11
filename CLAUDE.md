@@ -21,7 +21,7 @@ bash scripts/stop.sh
 sudo systemctl start|stop|restart <service_name>
 ```
 
-Services: `vicon_data_collector`, `estimation_data_collector`, `setpoint_data_collector`, `triangulator`, `hongi_process`, `viser`
+Services: `vicon_data_collector`, `estimation_data_collector`, `setpoint_data_collector`, `triangulator`, `hongi_process`, `viser`, `nn_inferrer`, `nn_online_learner`
 
 ## Running Individual Scripts (Development)
 
@@ -37,6 +37,8 @@ python triangulator.py            # Obstacle distance computation
 python baby_sitter.py             # Viser 3D visualization
 python joeystick_sender.py        # Joystick input sender (run on remote PC)
 python vicon_sender.py            # Vicon data sender (run on Vicon PC)
+python -m nn.inferrer             # NN inferrer: SHM → model → zarr log (toggle: i)
+python -m nn.online_learner       # NN online learner: generational training (toggle: u)
 ```
 
 ## Running Tests
@@ -82,9 +84,10 @@ Processes call `resource_tracker.unregister()` on shared memory they did not cre
 
 ### State Representation
 
-`estimated_state` uses: `[x, y, z, qw, qx, qy, qz, vx, vy, vz, wx, wy, wz]` (indices 0-12).
+`estimated_state` layout: `[x, y, z, vx, vy, vz, qw, qx, qy, qz, wx, wy, wz]` (indices 0-12).
 
-`hongi_process.py` converts quaternion indices `[3:7]` → euler `[roll, pitch, yaw]` before passing to the controller, which expects `[x,y,z, vx,vy,vz, roll,pitch,yaw, wx,wy,wz]` (12-dim state).
+Written by `estimator_collector.py` in this order: pos(0:3), vel(3:6), quat(6:10), angvel(10:13).
+This matches the Thesis-NN 23-dim feature layout (pos·vel·quat·angvel are the first 13 dims).
 
 ### Flight Log Format (HDF5)
 
