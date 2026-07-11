@@ -162,8 +162,12 @@ def test_online_training_step():
 def test_online_learner_loop():
     """Simulate online_learner.main(): p_cycles of train → eval (ATE) → swap-if-better.
 
-    Replaces SHM/CollectorThread with log data; no coordinator required.
-    Training mode and schedule are taken from online_learner.yaml.
+    Sliding window over the .pt log: each cycle shifts the training window
+    forward by one segment, dropping the oldest data and adding the newest.
+    Zarr size stays constant across cycles (no memory growth).
+
+    Challenger persists across rejections — it keeps training on new windows
+    rather than being reset to the champion's weights each cycle.
     """
     import copy
     from data.dataset import QuickDatasetStraight
@@ -179,14 +183,27 @@ def test_online_learner_loop():
     )
     model.to(device).eval()
 
-    input_len  = mcfg["input_len"]
-    output_len = mcfg["output_len"]
-    pred_dim   = mcfg["models"]["out_dim"]
-    window     = input_len + output_len + input_len
-    mode       = cfg.get("training_mode", "rollout")
-    n_cycles   = cfg.get("p_cycles", 2)
+    input_len    = mcfg["input_len"]
+    output_len   = mcfg["output_len"]
+    pred_dim     = mcfg["models"]["out_dim"]
+    window       = input_len + output_len
+    mode         = cfg.get("training_mode", "rollout")
+    n_cycles     = cfg.get("p_cycles", 2)
+    window_width = cfg.get("window_width", 2)  # segments kept in the sliding window
 
-    tensor = torch.load(cfg["flight_log_pt"])
+    tensor  = torch.load(cfg["flight_log_pt"])
+    # Divide the log so the window can slide n_cycles times
+    n_segs  = n_cycles + window_width - 1
+    seg_len = len(tensor) // n_segs
+    assert seg_len > window * 2, (
+        f"log too short: seg_len={seg_len} must be > {window * 2} frames"
+    )
+
+    def _build_window_zarr(zarr_path: Path, cycle: int) -> int:
+        start  = cycle * seg_len
+        end    = start + window_width * seg_len
+        sliced = tensor[start:end]
+        return _save_as_episodes(sliced, zarr_path, episode_len=window * 10)
 
     def _ate(m, zarr_path, ep_idx=0):
         m.eval()
@@ -195,20 +212,25 @@ def test_online_learner_loop():
         pred, truth = evaluate(m, loader, input_len, output_len, device, pred_dim=pred_dim)
         return metric_ate(pred, truth)
 
+    # Challenger persists across rejections — only reset after a swap
+    challenger = copy.deepcopy(model)
+    optimizer  = torch.optim.AdamW(challenger.parameters(),
+                                   lr=cfg.get("lr", 1e-4),
+                                   weight_decay=cfg.get("weight_decay", 0.0))
+
     with tempfile.TemporaryDirectory() as tmp:
         zarr_path = Path(tmp) / "online.zarr"
-        n_eps = _save_as_episodes(tensor, zarr_path, episode_len=window * 10)
-        assert n_eps > 0, "log too short to form any episodes"
 
         for cycle in range(n_cycles):
-            challenger = copy.deepcopy(model)
-            optimizer  = torch.optim.AdamW(challenger.parameters(),
-                                           lr=mcfg["training"]["lr"],
-                                           weight_decay=cfg.get("weight_decay", 0.0))
+            t_start = cycle * seg_len
+            t_end   = t_start + window_width * seg_len
+            n_eps   = _build_window_zarr(zarr_path, cycle)
+            assert n_eps > 0, f"cycle {cycle}: window too short to form episodes"
 
             dataset = QuickDataset2(path=str(zarr_path),
                                     training_size=cfg.get("m_train_steps", 20),
-                                    window_size=window)
+                                    window_size=window,
+                                    seed=cfg.get("seed", 0) + cycle)
             loader  = DataLoader(dataset, batch_size=cfg.get("batch_size", 4), num_workers=0)
             _dispatch_train(mode, loader, challenger, optimizer, cfg, pred_dim, device)
 
@@ -216,8 +238,13 @@ def test_online_learner_loop():
             new_ate = _ate(challenger, zarr_path)
             swapped = new_ate < cur_ate
             if swapped:
-                model = challenger
-            print(f"[cycle {cycle}] cur_ATE={cur_ate:.4f}  new_ATE={new_ate:.4f}  "
+                model      = challenger
+                challenger = copy.deepcopy(model)
+                optimizer  = torch.optim.AdamW(challenger.parameters(),
+                                               lr=cfg.get("lr", 1e-4),
+                                               weight_decay=cfg.get("weight_decay", 0.0))
+            print(f"[cycle {cycle}] frames {t_start}–{t_end}  "
+                  f"cur_ATE={cur_ate:.4f}  new_ATE={new_ate:.4f}  "
                   f"→ {'swapped' if swapped else 'retained'} ({mode})")
 
     print("[OK] online_learner loop simulation complete")
