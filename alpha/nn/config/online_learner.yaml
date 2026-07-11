@@ -4,6 +4,10 @@
 # Initial (generation-0) Hydra run dir — must contain .hydra/config.yaml + *.pth
 model_run_dir: /home/nodale/Thesis/Thesis-NN/latest_model/09-22-02/0
 
+# Pre-converted flight log tensor (.pt) for offline test / evaluation.
+# Produce with Thesis-NN/data/converter.py from a raw PX4 .ulg log.
+flight_log_pt: /home/nodale/Thesis/Thesis-NN/rl_dataset/converted.pt
+
 # ── Output paths ────────────────────────────────────────────────────────────
 gen_dir:      /home/nodale/Thesis/output/generations      # per-cycle checkpoints
 infer_zarr:   /home/nodale/Thesis/output/infer_log.zarr   # inference thread log

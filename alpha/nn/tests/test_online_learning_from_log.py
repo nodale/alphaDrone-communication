@@ -3,13 +3,11 @@ Simulate online learning from a pre-converted .pt flight log tensor.
 No SHM, no coordinator, no running services required.
 
 Usage (from alpha/):
-    python nn/tests/test_online_learning_from_log.py <flight_log.pt>
+    python nn/tests/test_online_learning_from_log.py
 
-The .pt file must be a (T, 23) float32 tensor in the same normalised layout
-the model was trained on (pos/3, lin_vel/0.8, quat_frd, ang_vel/0.5,
-acc/25, thrust/9.81, setpoint/3). Produce one with Thesis-NN/data/converter.py.
-
-Model path: set MODEL_RUN_DIR below, or in nn/config/inferrer.yaml (model_run_dir key).
+Paths are read from nn/config/online_learner.yaml:
+  model_run_dir  — Hydra run dir with .hydra/config.yaml + *.pth checkpoint
+  flight_log_pt  — (T, 23) float32 tensor produced by Thesis-NN/data/converter.py
 """
 
 import sys
@@ -18,6 +16,7 @@ from pathlib import Path
 
 import numpy as np
 import torch
+import yaml
 import zarr
 from torch.utils.data import DataLoader
 
@@ -31,7 +30,11 @@ from deploy.estimator import (
 )
 
 # ── Config ────────────────────────────────────────────────────────────────────
-MODEL_RUN_DIR = Path("/home/nodale/Thesis/Thesis-NN/latest_model/09-22-02/0")
+_CONFIG_PATH = Path(__file__).parent.parent / "config" / "online_learner.yaml"
+
+def _load_cfg() -> dict:
+    with open(_CONFIG_PATH) as f:
+        return yaml.safe_load(f)
 
 _N_DIM = 23
 
@@ -48,25 +51,28 @@ def _save_as_episodes(tensor: torch.Tensor, zarr_path: Path, episode_len: int):
 
 # ── Tests ─────────────────────────────────────────────────────────────────────
 
-def test_data_conversion(pt_path: Path):
-    tensor = torch.load(pt_path)
+def test_data_conversion():
+    cfg    = _load_cfg()
+    tensor = torch.load(cfg["flight_log_pt"])
     assert tensor.ndim == 2 and tensor.shape[1] == _N_DIM, f"bad shape {tensor.shape}"
     print(f"[OK] data loaded: {tensor.shape}")
 
 
-def test_inference_from_log(pt_path: Path):
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    mcfg   = _load_hydra_cfg(MODEL_RUN_DIR)
+def test_inference_from_log():
+    cfg    = _load_cfg()
+    run    = Path(cfg["model_run_dir"])
+    device = torch.device(cfg.get("device", "cpu"))
+    mcfg   = _load_hydra_cfg(run)
     model  = _build_model(mcfg)
     model.load_state_dict(
-        _strip_compile_prefix(torch.load(_find_checkpoint(MODEL_RUN_DIR), map_location=device))
+        _strip_compile_prefix(torch.load(_find_checkpoint(run), map_location=device))
     )
     model.to(device).eval()
 
     input_len  = mcfg["input_len"]
     output_len = mcfg["output_len"]
 
-    tensor  = torch.load(pt_path)
+    tensor  = torch.load(cfg["flight_log_pt"])
     dataset = FlightLog(data=tensor, window_size=input_len + output_len)
     loader  = DataLoader(dataset, batch_size=None, num_workers=0)
 
@@ -77,12 +83,14 @@ def test_inference_from_log(pt_path: Path):
     print(f"[OK] inference: {window.shape} → {out.shape}")
 
 
-def test_online_training_step(pt_path: Path):
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    mcfg   = _load_hydra_cfg(MODEL_RUN_DIR)
+def test_online_training_step():
+    cfg    = _load_cfg()
+    run    = Path(cfg["model_run_dir"])
+    device = torch.device(cfg.get("device", "cpu"))
+    mcfg   = _load_hydra_cfg(run)
     model  = _build_model(mcfg)
     model.load_state_dict(
-        _strip_compile_prefix(torch.load(_find_checkpoint(MODEL_RUN_DIR), map_location=device))
+        _strip_compile_prefix(torch.load(_find_checkpoint(run), map_location=device))
     )
     model.to(device)
 
@@ -90,7 +98,7 @@ def test_online_training_step(pt_path: Path):
     output_len = mcfg["output_len"]
     window     = input_len + output_len
 
-    tensor = torch.load(pt_path)
+    tensor = torch.load(cfg["flight_log_pt"])
 
     with tempfile.TemporaryDirectory() as tmp:
         zarr_path  = Path(tmp) / "online.zarr"
@@ -112,7 +120,7 @@ def test_online_training_step(pt_path: Path):
     print(f"[OK] training step: loss={loss.item():.4f}")
 
 
-def test_online_learner_loop(pt_path: Path, n_cycles: int = 2, train_steps: int = 20):
+def test_online_learner_loop(n_cycles: int = 2, train_steps: int = 20):
     """Simulate online_learner.main(): n_cycles of train → eval (ATE) → swap-if-better.
 
     Replaces SHM/CollectorThread with log data; no coordinator required.
@@ -122,11 +130,13 @@ def test_online_learner_loop(pt_path: Path, n_cycles: int = 2, train_steps: int 
     from evaluate.evaluator import evaluate
     from evaluate.metrics import metric_ate
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    mcfg   = _load_hydra_cfg(MODEL_RUN_DIR)
+    cfg    = _load_cfg()
+    run    = Path(cfg["model_run_dir"])
+    device = torch.device(cfg.get("device", "cpu"))
+    mcfg   = _load_hydra_cfg(run)
     model  = _build_model(mcfg)
     model.load_state_dict(
-        _strip_compile_prefix(torch.load(_find_checkpoint(MODEL_RUN_DIR), map_location=device))
+        _strip_compile_prefix(torch.load(_find_checkpoint(run), map_location=device))
     )
     model.to(device).eval()
 
@@ -135,7 +145,7 @@ def test_online_learner_loop(pt_path: Path, n_cycles: int = 2, train_steps: int 
     out_dim   = mcfg["models"]["out_dim"]
     window    = input_len + output_len
 
-    tensor = torch.load(pt_path)
+    tensor = torch.load(cfg["flight_log_pt"])
 
     def _ate(m, zarr_path, ep_idx=0):
         m.eval()
@@ -178,13 +188,8 @@ def test_online_learner_loop(pt_path: Path, n_cycles: int = 2, train_steps: int 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python nn/tests/test_online_learning_from_log.py <flight_log.pt>")
-        sys.exit(1)
-
-    pt_path = Path(sys.argv[1])
-    test_data_conversion(pt_path)
-    test_inference_from_log(pt_path)
-    test_online_training_step(pt_path)
-    test_online_learner_loop(pt_path)
+    test_data_conversion()
+    test_inference_from_log()
+    test_online_training_step()
+    test_online_learner_loop()
     print("\nAll tests passed.")
