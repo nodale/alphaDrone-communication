@@ -186,7 +186,7 @@ def test_online_learner_loop():
     input_len    = mcfg["input_len"]
     output_len   = mcfg["output_len"]
     pred_dim     = mcfg["models"]["out_dim"]
-    window       = input_len + output_len
+    window       = input_len * 2 + output_len
     mode         = cfg.get("training_mode", "rollout")
     n_cycles     = cfg.get("p_cycles", 2)
     window_width = cfg.get("window_width", 2)  # segments kept in the sliding window
@@ -215,7 +215,7 @@ def test_online_learner_loop():
     # Challenger persists across rejections — only reset after a swap
     challenger = copy.deepcopy(model)
     optimizer  = torch.optim.AdamW(challenger.parameters(),
-                                   lr=cfg.get("lr", 1e-4),
+                                   lr=mcfg["training"]["lr"],
                                    weight_decay=cfg.get("weight_decay", 0.0))
 
     with tempfile.TemporaryDirectory() as tmp:
@@ -241,7 +241,7 @@ def test_online_learner_loop():
                 model      = challenger
                 challenger = copy.deepcopy(model)
                 optimizer  = torch.optim.AdamW(challenger.parameters(),
-                                               lr=cfg.get("lr", 1e-4),
+                                               lr=mcfg["training"]["lr"],
                                                weight_decay=cfg.get("weight_decay", 0.0))
             print(f"[cycle {cycle}] frames {t_start}–{t_end}  "
                   f"cur_ATE={cur_ate:.4f}  new_ATE={new_ate:.4f}  "
