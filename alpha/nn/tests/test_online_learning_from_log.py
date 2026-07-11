@@ -23,6 +23,7 @@ from torch.utils.data import DataLoader
 _ALPHA     = Path(__file__).parent.parent.parent
 _THESIS_NN = _ALPHA.parent.parent / "Thesis-NN"
 sys.path.insert(0, str(_THESIS_NN))
+sys.path.insert(0, str("/home/egghead/Thesis/Thesis-NN"))
 
 from data.dataset import FlightLog, QuickDataset2
 from deploy.estimator import (
@@ -41,11 +42,11 @@ _N_DIM = 23
 
 def _save_as_episodes(tensor: torch.Tensor, zarr_path: Path, episode_len: int):
     """Chop tensor into episodes in the CollectorThread zarr format."""
-    data = tensor.numpy()
+    data = tensor.cpu().numpy()
     T    = (len(data) // episode_len) * episode_len
     eps  = data[:T].reshape(-1, episode_len, _N_DIM).astype(np.float32)
     store = zarr.open(str(zarr_path), mode="w")
-    store.create_dataset("episodes", data=eps, chunks=(1, episode_len, _N_DIM))
+    store.create_dataset("episodes", data=eps, chunks=(1, episode_len, _N_DIM), shape=(1, episode_len, _N_DIM))
     return eps.shape[0]
 
 

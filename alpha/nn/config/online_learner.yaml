@@ -2,23 +2,23 @@
 
 # ── Model source ────────────────────────────────────────────────────────────
 # Initial (generation-0) Hydra run dir — must contain .hydra/config.yaml + *.pth
-model_run_dir: /home/nodale/Thesis/Thesis-NN/latest_model/09-22-02/0
+model_run_dir: /home/egghead/Thesis/Thesis-NN/latest_model/09-44-24/0
 
 # Pre-converted flight log tensor (.pt) for offline test / evaluation.
 # Produce with Thesis-NN/data/converter.py from a raw PX4 .ulg log.
-flight_log_pt: /home/nodale/Thesis/Thesis-NN/rl_dataset/converted.pt
+flight_log_pt: /home/egghead/Thesis/Thesis-NN/rl_dataset/converted.pt
 
 # ── Output paths ────────────────────────────────────────────────────────────
-gen_dir:      /home/nodale/Thesis/output/generations      # per-cycle checkpoints
-infer_zarr:   /home/nodale/Thesis/output/infer_log.zarr   # inference thread log
-online_zarr:  /home/nodale/Thesis/output/online_data.zarr # vicon-supervised episodes
+gen_dir:      /home/egghead/Thesis/output/generations      # per-cycle checkpoints
+infer_zarr:   /home/egghead/Thesis/output/infer_log.zarr   # inference thread log
+online_zarr:  /home/egghead/Thesis/output/online_data.zarr # vicon-supervised episodes
 
 # Simulation dataset for evaluation (same zarr format as Thesis-NN training data)
-sim_dataset_path: /home/nodale/Thesis/Thesis-NN/latest_model/09-22-02/data.zarr
+sim_dataset_path: /media/egghead/Scratch/joey/simulation_data/patient_one_data.zarr/
 
 # ── Generational schedule ───────────────────────────────────────────────────
 p_cycles: 3          # total train-eval-swap cycles
-m_train_steps: 5000  # online training samples per cycle (QuickDataset2 training_size)
+m_train_steps: 1000  # online training samples per cycle (QuickDataset2 training_size)
 rollout_steps: 16     # rollout horizon (rollout / gml_rollout modes)
 n_eval_traj: 5        # trajectories from sim AND online each (equal split)
 
