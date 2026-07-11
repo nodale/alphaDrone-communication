@@ -93,6 +93,35 @@ def test_inference_from_log():
     print(f"[OK] deployment sim: {T} steps → {len(predictions)} predictions, ATE={ate:.4f} m")
 
 
+def _dispatch_train(mode, loader, model, optimizer, cfg, pred_dim, device):
+    """Call the appropriate trainer.py training function for the given mode."""
+    from train.trainer import (
+        train_loop, train_rollout_loop, train_rollout_horizon_loop,
+        train_gml_loop, train_gml_rollout_loop,
+    )
+    kw = dict(batch_size=cfg.get("batch_size", 4), pred_dim=pred_dim)
+    if mode == "standard":
+        train_loop(loader, model, optimizer, **kw)
+    elif mode in ("rollout", "rollout_horz", "gml_rollout"):
+        gen = torch.Generator(device=device).manual_seed(cfg.get("seed", 0))
+        rollout_kw = dict(
+            rollout_max_steps=cfg.get("rollout_steps", 16),
+            schedule_prob=cfg.get("max_schedule_prob", 0.0),
+            **kw,
+        )
+        if mode == "rollout":
+            train_rollout_loop(loader, model, optimizer, gen, **rollout_kw)
+        elif mode == "rollout_horz":
+            train_rollout_horizon_loop(loader, model, optimizer, gen, **rollout_kw)
+        else:
+            train_gml_rollout_loop(loader, model, optimizer, gen, **rollout_kw)
+    elif mode == "gml":
+        train_gml_loop(loader, model, optimizer,
+                       batch_size=cfg.get("batch_size", 4), device=str(device))
+    else:
+        raise ValueError(f"unknown training_mode: {mode!r}")
+
+
 def test_online_training_step():
     cfg    = _load_cfg()
     run    = Path(cfg["model_run_dir"])
@@ -107,6 +136,8 @@ def test_online_training_step():
     input_len  = mcfg["input_len"]
     output_len = mcfg["output_len"]
     window     = input_len + output_len
+    pred_dim   = mcfg["models"]["out_dim"]
+    mode       = cfg.get("training_mode", "rollout")
 
     tensor = torch.load(cfg["flight_log_pt"])
 
@@ -115,30 +146,28 @@ def test_online_training_step():
         n_episodes = _save_as_episodes(tensor, zarr_path, episode_len=window * 10)
         assert n_episodes > 0, "log too short to form any episodes"
 
-        dataset = QuickDataset2(path=str(zarr_path), training_size=10, window_size=window)
-        loader  = DataLoader(dataset, batch_size=4, num_workers=0)
+        dataset   = QuickDataset2(path=str(zarr_path),
+                                  training_size=cfg.get("m_train_steps", 10),
+                                  window_size=window)
+        loader    = DataLoader(dataset, batch_size=cfg.get("batch_size", 4), num_workers=0)
+        optimizer = torch.optim.AdamW(model.parameters(),
+                                      lr=cfg.get("lr", 1e-4),
+                                      weight_decay=cfg.get("weight_decay", 0.0))
 
-        optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4)
-        model.train()
-        batch  = next(iter(loader)).to(device)     # (4, window, 23)
-        out    = model(batch[:, :input_len])       # (4, output_len, out_dim)
-        loss   = torch.nn.functional.mse_loss(out[:, 0, :10], batch[:, input_len, :10])
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
+        _dispatch_train(mode, loader, model, optimizer, cfg, pred_dim, device)
 
-    print(f"[OK] training step: loss={loss.item():.4f}")
+    print(f"[OK] training step ({mode})")
 
 
-def test_online_learner_loop(n_cycles: int = 2, train_steps: int = 20):
-    """Simulate online_learner.main(): n_cycles of train → eval (ATE) → swap-if-better.
+def test_online_learner_loop():
+    """Simulate online_learner.main(): p_cycles of train → eval (ATE) → swap-if-better.
 
     Replaces SHM/CollectorThread with log data; no coordinator required.
+    Training mode and schedule are taken from online_learner.yaml.
     """
     import copy
     from data.dataset import QuickDatasetStraight
     from evaluate.evaluator import evaluate
-    from evaluate.metrics import metric_ate
 
     cfg    = _load_cfg()
     run    = Path(cfg["model_run_dir"])
@@ -150,10 +179,12 @@ def test_online_learner_loop(n_cycles: int = 2, train_steps: int = 20):
     )
     model.to(device).eval()
 
-    input_len = mcfg["input_len"]
+    input_len  = mcfg["input_len"]
     output_len = mcfg["output_len"]
-    out_dim   = mcfg["models"]["out_dim"]
-    window    = input_len + output_len
+    pred_dim   = mcfg["models"]["out_dim"]
+    window     = input_len + output_len
+    mode       = cfg.get("training_mode", "rollout")
+    n_cycles   = cfg.get("p_cycles", 2)
 
     tensor = torch.load(cfg["flight_log_pt"])
 
@@ -161,7 +192,7 @@ def test_online_learner_loop(n_cycles: int = 2, train_steps: int = 20):
         m.eval()
         ds     = QuickDatasetStraight(path=str(zarr_path), episode_idx=ep_idx, window_size=window)
         loader = DataLoader(ds, batch_size=None, num_workers=0)
-        pred, truth = evaluate(m, loader, input_len, output_len, device, pred_dim=out_dim)
+        pred, truth = evaluate(m, loader, input_len, output_len, device, pred_dim=pred_dim)
         return metric_ate(pred, truth)
 
     with tempfile.TemporaryDirectory() as tmp:
@@ -171,18 +202,15 @@ def test_online_learner_loop(n_cycles: int = 2, train_steps: int = 20):
 
         for cycle in range(n_cycles):
             challenger = copy.deepcopy(model)
-            challenger.train()
-            optimizer = torch.optim.AdamW(challenger.parameters(), lr=1e-4)
+            optimizer  = torch.optim.AdamW(challenger.parameters(),
+                                           lr=cfg.get("lr", 1e-4),
+                                           weight_decay=cfg.get("weight_decay", 0.0))
 
-            dataset = QuickDataset2(path=str(zarr_path), training_size=train_steps, window_size=window)
-            loader  = DataLoader(dataset, batch_size=4, num_workers=0)
-            for batch in loader:
-                batch = batch.to(device)
-                out  = challenger(batch[:, :input_len])
-                loss = torch.nn.functional.mse_loss(out[:, 0, :out_dim], batch[:, input_len, :out_dim])
-                optimizer.zero_grad()
-                loss.backward()
-                optimizer.step()
+            dataset = QuickDataset2(path=str(zarr_path),
+                                    training_size=cfg.get("m_train_steps", 20),
+                                    window_size=window)
+            loader  = DataLoader(dataset, batch_size=cfg.get("batch_size", 4), num_workers=0)
+            _dispatch_train(mode, loader, challenger, optimizer, cfg, pred_dim, device)
 
             cur_ate = _ate(model,      zarr_path)
             new_ate = _ate(challenger, zarr_path)
@@ -190,7 +218,7 @@ def test_online_learner_loop(n_cycles: int = 2, train_steps: int = 20):
             if swapped:
                 model = challenger
             print(f"[cycle {cycle}] cur_ATE={cur_ate:.4f}  new_ATE={new_ate:.4f}  "
-                  f"→ {'swapped' if swapped else 'retained'}")
+                  f"→ {'swapped' if swapped else 'retained'} ({mode})")
 
     print("[OK] online_learner loop simulation complete")
 
