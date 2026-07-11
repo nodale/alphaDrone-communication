@@ -1,0 +1,19 @@
+# PX4 SITL MAVLink
+mavlink_address:  "udpin:0.0.0.0:14550"
+mavlink_baudrate: 921600
+
+# IsaacLab sends same msgpack UDP as vicon_sender.py
+isaaclab_host: "0.0.0.0"
+isaaclab_port: 8020
+
+# Constant value written to DIST while no triangulator runs
+safe_dist: 2.0
+
+# Scripted flight scenario — (delay_s, action)
+scenario:
+  - [2.0,  "arm"]
+  - [4.0,  "activate"]
+  - [5.0,  "lift"]
+  - [30.0, "land"]
+  - [35.0, "disarm"]
+  - [38.0, "quit"]

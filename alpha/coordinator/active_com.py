@@ -17,7 +17,7 @@ _LOOP_HZ   = 200
 _LOOP_PERIOD = 1.0 / _LOOP_HZ
 
 
-def main():
+def main(address: str = _ADDRESS, baudrate: int = _BAUDRATE, kb=None):
     gc.collect()
     gc.disable()
 
@@ -33,9 +33,9 @@ def main():
     nn_w    = ShmWriter(channels.NN_CTRL)             # coordinator owns NN enable flags
 
     # ── Services ─────────────────────────────────────────────────────────────
-    conn   = MavlinkConnection(_ADDRESS, _BAUDRATE)
+    conn   = MavlinkConnection(address, baudrate)
     conn.connect()
-    kb     = KeyboardHandler()
+    kb     = kb or KeyboardHandler()
     logger = FlightLogger()
 
     running = True
